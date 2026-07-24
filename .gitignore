@@ -1,0 +1,16 @@
+# Secrets
+.env
+
+# Generated
+stops.csv
+
+# OS
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+
+# Editor
+.vscode/
+.idea/
+*.sublime-workspace
