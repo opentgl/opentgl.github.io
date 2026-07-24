@@ -15,8 +15,28 @@ for (const line of envRaw.split('\n')) {
   if (m) env[m[1]] = m[2];
 }
 
+function toExportUrl(url) {
+  const m = url.match(/\/spreadsheets\/d\/([^/]+)/);
+  if (!m) return url;
+  const key = m[1];
+  const gidMatch = url.match(/[#&]gid=(\d+)/);
+  const gid = gidMatch ? gidMatch[1] : '0';
+  return `https://docs.google.com/spreadsheets/d/${key}/export?format=csv&gid=${gid}`;
+}
+
 function serveFile(res, filePath) {
   const ext = path.extname(filePath);
+  if (filePath === './index.html') {
+    let html = fs.readFileSync(filePath, 'utf8');
+    const cfg = JSON.stringify({
+      YANDEX_API_KEY: env.YANDEX_TILES_API || '',
+      SHEET_URL: toExportUrl(env.GOOGLE_SHEET_TILES || '')
+    });
+    html = html.replace('/*CONFIG*/', cfg);
+    res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
+    res.end(html);
+    return;
+  }
   fs.readFile(filePath, (err, data) => {
     if (err) {
       res.writeHead(404, { 'Content-Type': 'text/plain; charset=utf-8' });
@@ -28,30 +48,9 @@ function serveFile(res, filePath) {
   });
 }
 
-function toExportUrl(url) {
-  const m = url.match(/\/spreadsheets\/d\/([^/]+)/);
-  if (!m) return url;
-  const key = m[1];
-  const gidMatch = url.match(/[#&]gid=(\d+)/);
-  const gid = gidMatch ? gidMatch[1] : '0';
-  return `https://docs.google.com/spreadsheets/d/${key}/export?format=csv&gid=${gid}`;
-}
-
 const server = http.createServer((req, res) => {
-  if (req.url === '/config.js') {
-    const cfg = JSON.stringify({
-      YANDEX_API_KEY: env.YANDEX_TILES_API || '',
-      SHEET_URL: toExportUrl(env.GOOGLE_SHEET_TILES || '')
-    });
-    res.writeHead(200, { 'Content-Type': 'application/javascript; charset=utf-8' });
-    res.end(`const CONFIG = ${cfg};`);
-    return;
-  }
-  if (req.url === '/') {
-    serveFile(res, './index.html');
-    return;
-  }
-  serveFile(res, '.' + req.url);
+  const url = req.url === '/' ? './index.html' : '.' + req.url;
+  serveFile(res, url);
 });
 
 const PORT = process.env.PORT || 8080;
