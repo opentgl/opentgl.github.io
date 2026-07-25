@@ -1,8 +1,19 @@
 # Secrets
 .env
+.env.local
+.env.production
+
+# Google credentials
+*.json.key
+service-account.json
+credentials.json
+google-service-account.json
 
 # Generated
 stops.csv
+
+# Download scripts dependencies
+requirements-download.txt
 
 # OS
 .DS_Store
@@ -14,3 +25,16 @@ Thumbs.db
 .vscode/
 .idea/
 *.sublime-workspace
+
+# Node
+node_modules/
+
+# Temp
+/tmp/
+*.tmp
+*.bak
+*.orig
+
+# Ignore downloaded data backup (to be overwritten from Google Drive)
+# example.csv/*
+# !example.csv/.gitkeep
