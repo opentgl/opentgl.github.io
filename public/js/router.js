@@ -61,26 +61,22 @@ function buildSidebar() {
     cats[c.category].count++;
   });
   for (const [key, meta] of Object.entries(state.categoryMeta)) {
-      if (!cats[key]) continue;
-      const a = document.createElement('a');
-      // Добавлен класс text-center для выравнивания текста и flex-fill / mx-2 для одинаковых расстояний
-      a.className = `nav-link d-flex flex-column align-items-center text-center flex-fill mx-2`;
-      a.href = `#category/${key}`;
-      // Для span добавлен стиль text-wrap (или встроенный стиль max-width + word-break)
-      a.innerHTML = `
-      <span class="text-wrap" style="color:${meta.color}; max-width: 140px; word-break: break-word;">${meta.label}</span>
-      <i color='${meta.color}' data-lucide="${meta.icon}" class="mt-2"></i>
-      `;
-      nav.appendChild(a);
+    if (!cats[key]) continue;
+    const a = document.createElement('a');
+    a.className = 'nav-link d-flex flex-column align-items-center text-center px-2 px-md-3';
+    a.href = `#category/${key}`;
+    a.innerHTML = `
+      <span style="color:${meta.color}; font-size:.8rem; line-height:1.1; word-break:break-word;">${meta.label}</span>
+      <i data-lucide="${meta.icon}" style="width:20px;height:20px;color:${meta.color};" class="mt-1"></i>`;
+    nav.appendChild(a);
   }
-
 
   const other = state.csvs.filter(c => !state.categoryMeta[c.category]);
   if (other.length) {
     const a = document.createElement('a');
-    a.className = 'nav-link';
+    a.className = 'nav-link d-flex flex-column align-items-center text-center px-2 px-md-3';
     a.href = '#category/other';
-    a.innerHTML = `<i data-lucide="folder-open" style="width:16px;height:16px;" class="me-2"></i>Прочее <span class="ms-auto badge bg-secondary bg-opacity-25 text-light" style="font-size:.7rem;">${other.length}</span>`;
+    a.innerHTML = `<span style="font-size:.8rem;">Прочее</span><i data-lucide="folder-open" style="width:20px;height:20px;" class="mt-1"></i>`;
     nav.appendChild(a);
   }
 }

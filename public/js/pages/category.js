@@ -28,11 +28,6 @@ export async function renderCategory(container, cat, subFilter) {
       <a href="#/" class="btn btn-outline-secondary btn-sm"><i data-lucide="arrow-left" style="width:14px;height:14px;"></i></a>
       <span class="badge fs-6" style="background:${meta.color};"><i data-lucide="${meta.icon}" style="width:14px;height:14px;" class="me-1"></i>${meta.label}</span>
       <h4 class="mb-0 fw-bold">${meta.label}</h4>
-    </div>
-    <div class="row g-3 mb-4">
-      <div class="col"><div class="card border-0 shadow-sm text-center py-3"><div class="card-body py-2"><h3 class="mb-0 fw-bold text-primary">${files.length}</h3><small class="text-muted">Файлов</small></div></div></div>
-      <div class="col"><div class="card border-0 shadow-sm text-center py-3"><div class="card-body py-2"><h3 class="mb-0 fw-bold text-primary">${totalRows}</h3><small class="text-muted">Записей</small></div></div></div>
-      <div class="col"><div class="card border-0 shadow-sm text-center py-3"><div class="card-body py-2"><h3 class="mb-0 fw-bold text-primary">${subcats.length}</h3><small class="text-muted">Подкатегорий</small></div></div></div>
     </div>`;
 
   if (subcats.length > 1 && !subFilter) {
