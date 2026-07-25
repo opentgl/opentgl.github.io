@@ -11,9 +11,7 @@ google-service-account.json
 
 # Generated
 stops.csv
-
-# Download scripts dependencies
-requirements-download.txt
+public/data/
 
 # OS
 .DS_Store
@@ -28,13 +26,14 @@ Thumbs.db
 
 # Node
 node_modules/
+package-lock.json
+
+# Python
+__pycache__/
+*.pyc
 
 # Temp
 /tmp/
 *.tmp
 *.bak
 *.orig
-
-# Ignore downloaded data backup (to be overwritten from Google Drive)
-# example.csv/*
-# !example.csv/.gitkeep

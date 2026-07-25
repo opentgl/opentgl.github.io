@@ -8,11 +8,19 @@
 
 > **Примечание:** В будущем данные будут загружаться из Google Sheets (только чтение).
 
-## Установка и запуск
+## Локальный запуск
+
+Просто откройте `public/index.html` в браузере или запустите любой статический сервер:
 
 ```bash
-npm install
-node server.js
+# Сборка статических данных из CSV (если меняли CSV)
+node scripts/build-static.js
+
+# Python
+python3 -m http.server -d public 8080
+
+# Node.js
+npx serve public
 ```
 
 Откройте **http://localhost:8080** в браузере.
@@ -21,37 +29,46 @@ node server.js
 
 ```
 opentgl/
-├── server.js                      # HTTP-сервер, API, отдача данных
-├── package.json                   # Зависимости (Bootstrap)
-├── public/
-│   ├── index.html                 # Единственный HTML (Bootstrap классы)
+├── scripts/
+│   ├── build-static.js            # Сборка CSV → JSON для статического сайта
+│   └── download_gdrive_data.py    # Загрузка данных из Google Drive
+├── public/                        # Корень статического сайта (деплоится на Pages)
+│   ├── index.html                 # SPA (только Bootstrap классы)
+│   ├── favicon.svg                # Иконка
 │   ├── css/
 │   │   └── style.css              # Минимальный CSS (sidebar, layout)
-│   └── js/                        # Все JavaScript модули
-│       ├── app.js                 # Точка входа
-│       ├── router.js              # Hash-роутер + навигация
-│       ├── api.js                 # Загрузка данных
-│       ├── state.js               # Центральное хранилище
-│       ├── utils.js               # Утилиты (escapeHtml, formatDate)
-│       └── pages/                 # Страницы
-│           ├── home.js            # Главная страница
-│           ├── category.js        # Страница категории
-│           ├── detail.js          # Страница детального просмотра
-│           └── about.js           # Страница "О сайте"
+│   ├── js/                        # ES-модули
+│   │   ├── app.js                 # Точка входа
+│   │   ├── router.js              # Hash-роутер + навигация
+│   │   ├── api.js                 # Загрузка статических JSON
+│   │   ├── state.js               # Центральное хранилище
+│   │   ├── utils.js               # Утилиты (escapeHtml, formatDate)
+│   │   └── pages/                 # Страницы
+│   │       ├── home.js            # Главная
+│   │       ├── category.js        # Категория
+│   │       ├── detail.js          # Детальный просмотр
+│   │       └── about.js           # О сайте
+│   └── data/                      # Сгенерированные статические данные (gitignored)
+│       ├── csvs-meta.json         # Метаданные всех CSV-файлов
+│       └── csv/                   # Преобразованные CSV → JSON
 ├── example.csv/                   # 25 CSV-файлов с данными Тольятти
+├── .github/workflows/
+│   ├── static.yml                 # Деплой на GitHub Pages
+│   └── download-data.yml          # Загрузка из Google Drive
 ├── geo.json                       # Геокодер (координаты)
-├── parse_stops.js                 # Извлечение остановок из Google Sheets
-├── favicon.svg                    # Иконка
-├── README.md                      # Этот файл
-└── .gitignore                     # Игнорируемые файлы
+├── .env.example                   # Переменные для загрузчика
+├── requirements-download.txt      # Python-зависимости
+├── favicon.svg                    # Иконка (оригинал)
+└── README.md                      # Этот файл
 ```
 
 ## Стек технологий
 
-- **Bootstrap 5** — единственная CSS-библиотека (CDN), все визуальные стили через Bootstrap utility-классы
+- **Bootstrap 5** — единственная CSS-библиотека (CDN), все стили через utility-классы
 - **Lucide Icons** — иконки, подключаются через CDN
-- **Node.js** — Backend-сервер, парсинг CSV, автоопределение кодировки (cp1251 → UTF-8) и разделителя
-- **ES-модули** — JavaScript код разделён на модули
+- **ES-модули** — JavaScript код разделён на модули (без сборщиков, нативные import/export)
+- **Node.js (build-time)** — сборка статических данных из CSV в JSON (`scripts/build-static.js`)
+- **GitHub Pages** — хостинг статического сайта
 - **Без кастомных стилей** — все классы в HTML — Bootstrap (d-*, p-*, m-*, bg-*, text-*, flex-*, col-*, card, table, badge, btn, spinner и т.д.)
 
 ## Структура страниц
@@ -70,13 +87,14 @@ opentgl/
 - **Боковая панель (sidebar)** — Список всех категорий с количеством файлов. Видна на desktop.
 - **Подвал (footer)** — Источники данных, лицензия, авторство.
 
-## API эндпоинты
+## Статические данные
 
-| Метод | URL | Описание |
-|-------|-----|----------|
-| GET | / | SPA страница |
-| GET | /api/csvs | Список всех CSV-файлов с метаданными |
-| GET | /api/csv/:filename | Данные CSV-файла в JSON |
+CSV-файлы преобразуются в JSON во время сборки (`scripts/build-static.js`) и сохраняются в `public/data/`:
+
+| Файл | Описание |
+|------|----------|
+| `data/csvs-meta.json` | Список всех CSV-файлов с метаданными (категория, дата, подкатегория) |
+| `data/csv/{filename}.json` | Распарсенные CSV-данные — `{ headers, rows, objects }` |
 
 ## Данные
 
@@ -129,9 +147,8 @@ python scripts/download_gdrive_data.py
 
 ### Workflow
 
-- **Триггер:** пуш в `main`, ручной запуск, расписание каждые 6 часов
-- **Действие:** скачивает CSV/JSON файлы из Google Drive → `example.csv/`, коммитит изменения
-- **Развертывание:** статический сайт на GitHub Pages
+1. **`download-data.yml`** — скачивает CSV из Google Drive → `example.csv/`, коммитит. Триггеры: пуш в `main`, ручной запуск, расписание каждые 6 часов.
+2. **`static.yml`** — запускает `scripts/build-static.js` (преобразует CSV → JSON), деплоит `public/` на GitHub Pages. Триггеры: пуш в `main`, ручной запуск.
 
 ## Автор
 

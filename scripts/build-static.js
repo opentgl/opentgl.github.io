@@ -1,18 +1,11 @@
 const fs = require('fs');
-const http = require('http');
 const path = require('path');
-const { execSync } = require('child_process');
 
-const DATA_DIR = path.join(__dirname, 'example.csv');
-const PORT = process.env.PORT || 8080;
-
-const MIME = {
-  '.html': 'text/html; charset=utf-8',
-  '.js': 'application/javascript; charset=utf-8',
-  '.json': 'application/json; charset=utf-8',
-  '.svg': 'image/svg+xml',
-  '.csv': 'text/csv; charset=utf-8',
-};
+const ROOT = path.join(__dirname, '..');
+const DATA_DIR = path.join(ROOT, 'example.csv');
+const PUBLIC_DIR = path.join(ROOT, 'public');
+const DATA_OUT = path.join(PUBLIC_DIR, 'data');
+const CSV_OUT = path.join(DATA_OUT, 'csv');
 
 const CATEGORIES = {
   transport: { label: 'Транспорт', icon: 'bus', color: '#0d6efd' },
@@ -60,31 +53,32 @@ function detectCategory(filename) {
   for (const entry of FILE_CATEGORY) {
     if (f.includes(entry.pattern)) return entry;
   }
-  return { cat: 'infrastructure', sub: filename.replace(/_file_\d+\.csv$/, '').replace(/^\d{4}[_-]\d{2}[_-]\d{2}[_-]?/, '').replace(/_/g, ' ') };
+  return {
+    cat: 'infrastructure',
+    sub: filename.replace(/_file_\d+\.csv$/, '').replace(/^\d{4}[_-]\d{2}[_-]\d{2}[_-]?/, '').replace(/_/g, ' ')
+  };
 }
 
 function extractDate(filename) {
   const m = filename.match(/(\d{4})[_-](\d{2})[_-](\d{2})/);
-  if (m) return `${m[1]}-${m[2]}-${m[3]}`;
-  return null;
+  return m ? `${m[1]}-${m[2]}-${m[3]}` : null;
 }
 
 function readCSV(filePath) {
-  const raw = fs.readFileSync(filePath);
-  try {
-    const utf8 = iconvDecode(raw);
-    return utf8.charCodeAt(0) === 0xFEFF ? utf8.slice(1) : utf8;
-  } catch {
-    return raw.toString('utf8');
+  const buf = fs.readFileSync(filePath);
+  let text;
+  if (buf[0] === 0xEF && buf[1] === 0xBB && buf[2] === 0xBF) {
+    text = buf.slice(3).toString('utf8');
+  } else {
+    text = buf.toString('utf8');
+    if (text.includes('\uFFFD')) {
+      try {
+        text = new TextDecoder('windows-1251').decode(buf);
+      } catch {
+      }
+    }
   }
-}
-
-function iconvDecode(buf) {
-  try {
-    return execSync('iconv -f cp1251 -t utf8', { input: buf, encoding: 'utf8', maxBuffer: 50 * 1024 * 1024 });
-  } catch {
-    return buf.toString('utf8');
-  }
+  return text;
 }
 
 function detectDelimiter(text) {
@@ -126,24 +120,43 @@ function parseCSV(text) {
 }
 
 function csvToObjects(rows) {
-  if (rows.length < 2) return [];
+  if (rows.length < 2) return { headers: [], rows: [], objects: [] };
   const headers = rows[0].map(h => h.trim());
-  return rows.slice(1).map(row => {
+  const objects = rows.slice(1).map(row => {
     const obj = {};
     headers.forEach((h, i) => { obj[h] = (row[i] || '').trim(); });
     return obj;
   });
+  return { headers, rows: rows, objects };
 }
 
-function scanCSVFiles() {
+function cleanDir(dir) {
+  if (fs.existsSync(dir)) {
+    for (const f of fs.readdirSync(dir)) {
+      if (f === '.gitkeep') continue;
+      fs.rmSync(path.join(dir, f), { recursive: true, force: true });
+    }
+  }
+}
+
+function build() {
+  console.log('Building static data from CSVs...');
+
+  fs.mkdirSync(CSV_OUT, { recursive: true });
+
   const files = fs.readdirSync(DATA_DIR).filter(f => f.endsWith('.csv'));
-  return files.map(f => {
-    const fullPath = path.join(DATA_DIR, f);
-    const stat = fs.statSync(fullPath);
-    const date = extractDate(f);
-    const cat = detectCategory(f);
-    return {
-      filename: f,
+  console.log(`Found ${files.length} CSV files`);
+
+  const csvMeta = [];
+
+  for (const filename of files) {
+    const filePath = path.join(DATA_DIR, filename);
+    const stat = fs.statSync(filePath);
+    const date = extractDate(filename);
+    const cat = detectCategory(filename);
+
+    const meta = {
+      filename,
       date,
       category: cat.cat,
       categoryLabel: CATEGORIES[cat.cat]?.label || 'Прочее',
@@ -151,66 +164,29 @@ function scanCSVFiles() {
       size: stat.size,
       mtime: stat.mtime,
     };
-  });
+    csvMeta.push(meta);
+
+    const text = readCSV(filePath);
+    const rows = parseCSV(text);
+    const parsed = csvToObjects(rows);
+
+    const jsonFilename = filename.replace(/\.csv$/i, '') + '.json';
+    const safeName = jsonFilename.replace(/[^a-zA-Z0-9_\-\.]/g, '_');
+    fs.writeFileSync(path.join(CSV_OUT, safeName), JSON.stringify(parsed), 'utf8');
+    console.log(`  ${filename} → data/csv/${safeName} (${parsed.objects.length} rows)`);
+  }
+
+  fs.writeFileSync(path.join(DATA_OUT, 'csvs-meta.json'), JSON.stringify(csvMeta), 'utf8');
+  console.log(`Wrote data/csvs-meta.json (${csvMeta.length} entries)`);
+
+  const faviconSrc = path.join(ROOT, 'favicon.svg');
+  const faviconDst = path.join(PUBLIC_DIR, 'favicon.svg');
+  if (fs.existsSync(faviconSrc) && !fs.existsSync(faviconDst)) {
+    fs.copyFileSync(faviconSrc, faviconDst);
+    console.log('Copied favicon.svg to public/');
+  }
+
+  console.log('Build complete.');
 }
 
-const server = http.createServer((req, res) => {
-  const url = new URL(req.url, `http://localhost:${PORT}`);
-  const pathname = url.pathname;
-
-  if (pathname === '/api/csvs') {
-    res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
-    res.end(JSON.stringify(scanCSVFiles()));
-    return;
-  }
-
-  const csvMatch = pathname.match(/^\/api\/csv\/(.+)/);
-  if (csvMatch) {
-    const filename = decodeURIComponent(csvMatch[1]);
-    const filePath = path.join(DATA_DIR, filename);
-    if (!filePath.startsWith(DATA_DIR) || !fs.existsSync(filePath)) {
-      res.writeHead(404);
-      res.end('Not found');
-      return;
-    }
-    try {
-      const text = readCSV(filePath);
-      const rows = parseCSV(text);
-      const objects = csvToObjects(rows);
-      res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
-      res.end(JSON.stringify({ headers: rows[0] || [], rows: rows, objects }));
-    } catch (e) {
-      res.writeHead(500);
-      res.end(JSON.stringify({ error: e.message }));
-    }
-    return;
-  }
-
-  const rootFiles = ['favicon.svg', 'geo.json', '.env.example'];
-  let filePath;
-  if (pathname === '/') {
-    filePath = path.join(__dirname, 'public', 'index.html');
-  } else {
-    const base = path.basename(pathname);
-    if (rootFiles.includes(base)) {
-      filePath = path.join(__dirname, base);
-    } else {
-      filePath = path.join(__dirname, 'public', pathname.replace(/^\//, ''));
-    }
-  }
-
-  if (!fs.existsSync(filePath)) {
-    res.writeHead(404);
-    res.end('Not found');
-    return;
-  }
-
-  const ext = path.extname(filePath);
-  const data = fs.readFileSync(filePath);
-  res.writeHead(200, { 'Content-Type': MIME[ext] || 'application/octet-stream' });
-  res.end(data);
-});
-
-server.listen(PORT, () => {
-  console.log(`OpenTGL Server: http://localhost:${PORT}`);
-});
+build();
