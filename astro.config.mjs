@@ -1,7 +1,7 @@
 import { defineConfig } from 'astro/config';
 
 export default defineConfig({
-  site: 'https://anomalyco.github.io',
+  site: 'https://zhidkovers.github.io',
   base: '/opentgl/',
   outDir: 'dist',
   publicDir: 'public',
