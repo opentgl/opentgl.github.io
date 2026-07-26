@@ -1,4 +1,8 @@
 # Открытый Тольятти
+![GitHub License](https://img.shields.io/github/license/zhidkovers/opentgl)
+![GitHub Actions Workflow Status](https://img.shields.io/github/actions/workflow/status/zhidkovers/opentgl/astro.yml)
+![GitHub commit activity](https://img.shields.io/github/commit-activity/m/zhidkovers/opentgl)
+![Website](https://img.shields.io/website?url=https%3A%2F%2Fzhidkovers.github.io%2Fopentgl)
 
 Портал открытых данных города Тольятти — транспорт, культура, образование, спорт, здравоохранение, недвижимость и инфраструктура.
 
@@ -80,10 +84,13 @@ opentgl/
 
 ## Стек
 
-- **Astro** — генерация статических страниц
-- **Bootstrap 5** — CSS (CDN)
-- **Lucide Icons** — иконки (CDN)
-- **GitHub Pages** — хостинг
+<img height="14" width="14" src="https://cdn.simpleicons.org/astro/white" /> **Astro** — генерация статических страниц
+
+<img height="14" width="14" src="https://cdn.simpleicons.org/bootstrap/white" /> **Bootstrap 5** — CSS (CDN)
+
+<img height="14" width="14" src="https://cdn.simpleicons.org/lucide/white" /> **Lucide Icons** — иконки (CDN)
+
+<img height="14" width="14" src="https://cdn.simpleicons.org/github/white" /> **GitHub Pages** — хостинг
 
 ## Автор
 
