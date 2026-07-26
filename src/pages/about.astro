@@ -1,0 +1,51 @@
+---
+import Layout from '../layouts/Layout.astro';
+import Navbar from '../components/Navbar.astro';
+import Footer from '../components/Footer.astro';
+---
+
+<Layout title="О сайте">
+  <Fragment slot="navbar"><Navbar /></Fragment>
+  <Fragment slot="footer"><Footer /></Fragment>
+
+  <div class="row justify-content-center">
+    <div class="col-md-8">
+      <h2 class="fs-3 fw-bold mb-3">О сайте</h2>
+      <div class="card border-0 shadow-sm mb-4">
+        <div class="card-body">
+          <p><strong>Открытый Тольятти</strong> — независимый портал для просмотра открытых данных города Тольятти. Данные получены из открытых источников Администрации г.о. Тольятти.</p>
+          <p>Приложение является независимым и создано в информационных целях. Автор не связан с администрацией города Тольятти.</p>
+          <p>Данные распространяются по лицензии <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank">CC BY 4.0</a>.</p>
+        </div>
+      </div>
+
+      <div class="card border-0 shadow-sm mb-4">
+        <div class="card-body">
+          <h2 class="fs-5 fw-bold mb-3">Источники данных</h2>
+          <ul>
+            <li><a href="https://tgl.ru/structure/department/reestr-municipalnyh-marshrutov-regulyarnyh-perevozok/" target="_blank">Реестр маршрутов регулярных перевозок</a></li>
+            <li><a href="https://tgl.ru/opendata/" target="_blank">Портал открытых данных администрации г.о. Тольятти</a></li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="card border-0 shadow-sm mb-4">
+        <div class="card-body">
+          <h2 class="fs-5 fw-bold mb-3">Исходный код</h2>
+          <p>Репозиторий проекта доступен на Github</p>
+          <img height="18" width="18" src="https://cdn.simpleicons.org/github/black" /> <a href="https://github.com/zhidkovers/opentgl" target="_blank">https://github.com/zhidkovers/opentgl</a>.
+        </div>
+      </div>
+
+      <div class="card border-0 shadow-sm mb-4">
+        <div class="card-body">
+          <h2 class="fs-5 fw-bold mb-3">Технологии</h2>
+            <img height="18" width="18" src="https://cdn.simpleicons.org/astro/black" /> <strong>Astro</strong> — генерация статических страниц</li><br>
+            <img height="18" width="18" src="https://cdn.simpleicons.org/Bootstrap/black" /> <strong>Bootstrap 5</strong> — CSS-фреймворк</li><br>
+            <img height="18" width="18" src="https://cdn.simpleicons.org/lucide/black" /> <strong>Lucide Icons</strong> — иконки</li><br>
+            <img height="18" width="18" src="https://cdn.simpleicons.org/github/black" /> <strong>GitHub Pages</strong> — хостинг</li>
+        </div>
+      </div>
+    </div>
+  </div>
+</Layout>

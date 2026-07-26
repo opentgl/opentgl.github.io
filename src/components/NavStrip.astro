@@ -1,0 +1,23 @@
+---
+const base = import.meta.env.BASE_URL;
+const { items } = Astro.props;
+---
+
+<div class="py-2 mb-2">
+  <nav class="nav flex-row gap-2 gap-md-3 justify-content-center flex-wrap">
+    {items.map(item => (
+      <a
+        class="nav-link d-flex flex-column align-items-center text-center px-2 px-md-3"
+        href={`${base}category/${item.key}`}
+        style="color: #495057; text-decoration: none; border-radius: .5rem; transition: background .15s;"
+        onmouseover="this.style.background='#e9ecef'"
+        onmouseout="this.style.background='transparent'"
+      >
+        <span style={`color: ${item.color}; font-size: .8rem; line-height: 1.1; word-break: break-word;`}>
+          {item.label}
+        </span>
+        <i data-lucide={item.icon} style={`width:20px;height:20px;color:${item.color};`} class="mt-1"></i>
+      </a>
+    ))}
+  </nav>
+</div>

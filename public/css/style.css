@@ -1,4 +1,2 @@
-body { display: flex; flex-direction: column; min-height: 100vh;}
+body { display: flex; flex-direction: column; min-height: 100vh; }
 .app-body { flex: 1; }
-#sidebar-nav .nav-link { color: #495057; text-decoration: none; border-radius: .5rem; transition: background .15s; }
-#sidebar-nav .nav-link:hover { background: #e9ecef; }

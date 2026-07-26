@@ -1,0 +1,48 @@
+---
+const { headers, objects } = Astro.props;
+
+function esc(s) {
+  if (s == null) return '';
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function linkify(key, value) {
+  if (!value) return '<span class="text-muted">&mdash;</span>';
+  const raw = String(value).trim();
+  const k = key.toLowerCase();
+  if (k.includes('почт') || k.includes('email') || k.includes('e-mail')) {
+    return raw.split(/[,;]/).map(e => e.trim()).filter(Boolean).map(e => `<a href="mailto:${esc(e)}" class="text-decoration-none">${esc(e)}</a>`).join('<br>');
+  }
+  if (k.includes('телефон') || k.includes('тел')) {
+    return raw.split(/[,;]/).map(p => p.trim()).filter(Boolean).map(p => {
+      const d = p.replace(/\D/g, '');
+      return d ? `<a href="tel:${d}" class="text-decoration-none">${esc(p)}</a>` : esc(p);
+    }).join('<br>');
+  }
+  if (k.includes('сайт') || k.includes('web') || k.includes('url')) {
+    const url = raw.startsWith('http') ? raw : 'https://' + raw;
+    return `<a href="${esc(url)}" target="_blank" rel="noopener" class="text-decoration-none">${esc(raw)}</a>`;
+  }
+  if (k.includes('адрес') || k.includes('местополож') || k.includes('местонахожд')) {
+    return `<a href="https://2gis.ru/togliatti/search/${encodeURIComponent(raw)}" target="_blank" rel="noopener" class="text-decoration-none">${esc(raw)}</a>`;
+  }
+  return esc(raw);
+}
+---
+
+<div class="table-responsive" style="max-height: 600px; overflow-y: auto;">
+  <table class="table table-hover table-sm mb-0">
+    <thead class="table-light" style="position: sticky; top: 0; z-index: 1;">
+      <tr>
+        {headers.map(h => <th class="text-nowrap">{esc(h)}</th>)}
+      </tr>
+    </thead>
+    <tbody>
+      {objects.map(obj => (
+        <tr>
+          {headers.map(h => <td set:html={linkify(h, obj[h])} />)}
+        </tr>
+      ))}
+    </tbody>
+  </table>
+</div>

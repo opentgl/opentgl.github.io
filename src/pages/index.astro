@@ -1,0 +1,46 @@
+---
+import Layout from '../layouts/Layout.astro';
+import Navbar from '../components/Navbar.astro';
+import Footer from '../components/Footer.astro';
+import NavStrip from '../components/NavStrip.astro';
+import { loadAllMeta, getCategories } from '../lib/csv-data.js';
+
+const base = import.meta.env.BASE_URL;
+const meta = loadAllMeta();
+const categories = getCategories(meta);
+---
+
+<Layout title="Портал открытых данных города Тольятти">
+  <Fragment slot="navbar"><Navbar /></Fragment>
+  <Fragment slot="navstrip">
+    <NavStrip items={categories.map(c => ({ key: c.key, label: c.label, icon: c.icon, color: c.color }))} />
+  </Fragment>
+  <Fragment slot="footer"><Footer /></Fragment>
+
+  <div class="d-flex gap-2 flex-wrap mb-4">
+    <span class="badge bg-primary bg-opacity-75 fs-6">{meta.length} файлов</span>
+    <span class="badge bg-success bg-opacity-75 fs-6">{categories.length} категорий</span>
+    <span class="badge bg-info bg-opacity-75 fs-6">{categories.reduce((s, c) => s + c.rowCount, 0)} записей</span>
+  </div>
+
+  <div class="row g-3">
+    {categories.map(cat => (
+      <div class="col-sm-6 col-lg-4 col-xl-3">
+        <div class="card h-100 border-0 shadow-sm" style="cursor:pointer;" onclick={`window.location='${base}category/${cat.key}'`}>
+          <div class="card-body">
+            <div class="d-flex align-items-center mb-2">
+              <span class="badge me-2" style={`background: ${cat.color};`}>
+                <i data-lucide={cat.icon} style="width:14px;height:14px;"></i>
+              </span>
+              <h2 class="card-title mb-0 fw-semibold fs-6">{cat.label}</h2>
+            </div>
+            <p class="card-text small text-muted mb-1">
+              {cat.subcategories.map(s => s.name).join(', ')}
+            </p>
+            <small class="text-muted">{cat.fileCount} файл(ов), {cat.rowCount} записей</small>
+          </div>
+        </div>
+      </div>
+    ))}
+  </div>
+</Layout>

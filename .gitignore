@@ -12,6 +12,8 @@ google-service-account.json
 # Generated
 stops.csv
 public/data/
+dist/
+.astro/
 
 # OS
 .DS_Store

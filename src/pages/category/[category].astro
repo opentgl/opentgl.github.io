@@ -1,0 +1,58 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import Navbar from '../../components/Navbar.astro';
+import Footer from '../../components/Footer.astro';
+import NavStrip from '../../components/NavStrip.astro';
+import DataTable from '../../components/DataTable.astro';
+import { loadAllMeta, loadDataByFile, getCategories } from '../../lib/csv-data.js';
+import { CATEGORIES } from '../../lib/categories.js';
+
+export async function getStaticPaths() {
+  const meta = loadAllMeta();
+  const cats = [...new Set(meta.map(m => m.category))].filter(c => CATEGORIES[c]);
+  return cats.map(cat => ({
+    params: { category: cat },
+    props: { category: cat },
+  }));
+}
+
+const base = import.meta.env.BASE_URL;
+const { category } = Astro.props;
+const meta = loadAllMeta();
+const catInfo = CATEGORIES[category] || { label: 'Прочее', icon: 'file-text', color: '#6c757d' };
+const files = meta.filter(m => m.category === category);
+
+const subcats = [...new Set(files.map(f => f.subcategory))];
+
+const allMeta = loadAllMeta();
+const categories = getCategories(allMeta);
+---
+
+<Layout title={catInfo.label}>
+  <Fragment slot="navbar"><Navbar /></Fragment>
+  <Fragment slot="navstrip">
+    <NavStrip items={categories.map(c => ({ key: c.key, label: c.label, icon: c.icon, color: c.color }))} />
+  </Fragment>
+  <Fragment slot="footer"><Footer /></Fragment>
+
+  <div class="d-flex align-items-center gap-2 mb-3">
+    <a href={base} class="btn btn-outline-secondary btn-sm">&larr; На главную</a>
+    <span class="badge fs-6" style={`background: ${catInfo.color};`}>
+      <i data-lucide={catInfo.icon} style="width:14px;height:14px;" class="me-1"></i>
+      {catInfo.label}
+    </span>
+  </div>
+
+  {files.map(file => {
+    const data = loadDataByFile(file.filename);
+    return (
+      <div class="card border-0 shadow-sm mb-3">
+        <div class="card-header bg-light d-flex justify-content-between align-items-center py-2">
+          <h2 class="fs-6 fw-semibold mb-0">{file.subcategory}</h2>
+          <span class="badge bg-secondary">{data.objects.length} записей</span>
+        </div>
+        <DataTable headers={data.headers} objects={data.objects} />
+      </div>
+    );
+  })}
+</Layout>
