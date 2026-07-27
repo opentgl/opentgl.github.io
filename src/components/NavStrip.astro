@@ -4,7 +4,8 @@ const { items } = Astro.props;
 ---
 
 <div class="py-2 mb-2">
-  <nav class="nav flex-row gap-2 gap-md-3 justify-content-center flex-wrap">
+  <div class="container">
+    <nav class="nav flex-row gap-2 gap-md-3 justify-content-center flex-wrap">
     {items.map(item => (
       <a
         class="nav-link d-flex flex-column align-items-center text-center px-2 px-md-3"
@@ -19,5 +20,6 @@ const { items } = Astro.props;
         <i data-lucide={item.icon} style={`width:20px;height:20px;color:${item.color};`} class="mt-1"></i>
       </a>
     ))}
-  </nav>
+    </nav>
+  </div>
 </div>
