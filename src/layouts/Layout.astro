@@ -33,10 +33,11 @@ const truncatedDesc = pageDesc.length > 160 ? pageDesc.slice(0, 157) + '...' : p
   </head>
   <body class="d-flex flex-column min-vh-100">
     <slot name="navbar" />
-    <div class="bg-dark text-white mt-2 mb-2 d-flex flex-column justify-content-center" style="background-image: url('https://ic.pics.livejournal.com/zdorovs/16627846/1811640/1811640_original.jpg'); background-size: cover; background-position: center; min-height: 300px;">
+    <div class="bg-dark text-white mt-2 mb-2 d-flex flex-column justify-content-center position-relative" style="background-image: url('https://ic.pics.livejournal.com/zdorovs/16627846/1811640/1811640_original.jpg'); background-size: cover; background-position: center; min-height: 300px;">
       <div class="container py-4 py-md-5">
         <h1 class="fw-bold m-0">Открытые данные Тольятти</h1>
       </div>
+      <a href="https://zdorovs.livejournal.com/43976.html" target="_blank" rel="noopener noreferrer" class="position-absolute bottom-0 end-0 text-white-50 small me-2 mb-1 text-decoration-none" style="background: rgba(0,0,0,0.5); padding: 2px 6px; border-radius: 3px;">фото: Кирилл Здоров</a>
     </div>
     <slot name="navstrip" />
     <div class="app-body">
