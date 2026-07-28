@@ -6,6 +6,11 @@
      viewBox="0 0 644 776">
   <defs>
   </defs>
+  <style>
+    @media (prefers-color-scheme: light) {
+      image { filter: invert(1); }
+    }
+  </style>
   <image id="raster0"
          x="0"
          y="0"

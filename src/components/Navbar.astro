@@ -1,6 +1,14 @@
 ---
 const base = import.meta.env.BASE_URL;
 ---
+<style is:global>
+  @media (max-width: 991.98px) {
+    .navbar .navbar-brand {
+      flex: 1;
+      text-align: center;
+    }
+  }
+</style>
 <nav class="navbar navbar-expand-lg navbar-dark bg-dark sticky-top">
   <div class="container">
     <a class="navbar-brand fw-bold" href={base}>Открытый Тольятти</a>

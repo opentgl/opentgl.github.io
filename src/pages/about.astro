@@ -18,6 +18,9 @@ const categories = getCategories(meta);
       background-color: var(--bs-gray-200); /* Легкий серый фон при наведении */
       color: var(--bs-dark);
     }
+    nav.sticky-top {
+      z-index: 1;
+    }
   </style>
   <Fragment slot="navbar"><Navbar /></Fragment>
   <Fragment slot="footer"><Footer /></Fragment>
