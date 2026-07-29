@@ -2,11 +2,14 @@ import { listSheetFiles, loadAllSheets } from './google-sheets.js';
 import { detectCategory, extractDate, CATEGORIES } from './categories.js';
 import { unifyHeaders, unifyObject } from './column-map.js';
 
-export async function loadAllMeta() {
+let cache = null;
+
+async function ensureCache() {
+  if (cache) return cache;
   const files = await listSheetFiles();
-  const allData = await loadAllSheets(files);
-  return files.map(filename => {
-    const data = allData[filename] || { headers: [], objects: [] };
+  const raw = await loadAllSheets(files);
+  const meta = files.map(filename => {
+    const data = raw[filename] || { headers: [], objects: [] };
     const cat = detectCategory(filename);
     return {
       filename,
@@ -16,13 +19,22 @@ export async function loadAllMeta() {
       subcategory: cat.sub,
       rowCount: data.objects.length,
       headers: unifyHeaders(data.headers),
+      _raw: data,
     };
   });
+  cache = meta;
+  return cache;
+}
+
+export async function loadAllMeta() {
+  const all = await ensureCache();
+  return all.map(({ _raw, ...m }) => m);
 }
 
 export async function loadDataByFile(filename) {
-  const allData = await loadAllSheets([filename]);
-  const data = allData[filename] || { headers: [], objects: [] };
+  const all = await ensureCache();
+  const entry = all.find(e => e.filename === filename);
+  const data = entry ? entry._raw : { headers: [], objects: [] };
   return {
     headers: unifyHeaders(data.headers),
     objects: data.objects.map(unifyObject),
