@@ -13,7 +13,7 @@ const categories = getCategories(meta);
 <Layout title="Портал открытых данных города Тольятти">
   <Fragment slot="navbar"><Navbar /></Fragment>
   <Fragment slot="navstrip">
-    <NavStrip items={categories.map(c => ({ key: c.key, label: c.label, icon: c.icon, color: c.color }))} />
+    <NavStrip items={categories.map(c => ({ key: c.key, label: c.label, icon: c.icon, color: c.color }))} active="" />
   </Fragment>
   <Fragment slot="footer"><Footer /></Fragment>
 

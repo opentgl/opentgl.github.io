@@ -1,25 +1,40 @@
 ---
 const base = import.meta.env.BASE_URL;
-const { items } = Astro.props;
+const { items, active } = Astro.props;
 ---
 
-<div class="py-2 mb-2">
+<div class="py-3 mb-3"> <!-- Увеличили вертикальные отступы блока -->
   <div class="container">
-    <nav class="nav flex-row gap-2 gap-md-3 justify-content-center flex-wrap">
-    {items.map(item => (
+    <!-- Увеличили gap между элементами для баланса с новыми размерами -->
+    <nav class="nav flex-row gap-3 gap-md-4 justify-content-center flex-wrap">
+    {items.map(item => {
+      const isActive = item.key === active;
+      // Сделали дефолтную обводку тоньше и мягче (1px #e2e4e6)
+      const borderColor = isActive ? item.color : 'rgb(228, 228, 228)'; 
+      const textColor = isActive ? item.color : '#4a5158'; 
+      
+      return (
       <a
-        class="nav-link d-flex flex-column align-items-center text-center px-2 px-md-3"
+        class="nav-link d-flex flex-column align-items-center text-center p-0 border-0"
         href={`${base}category/${item.key}`}
-        style="color: #495057; text-decoration: none; border-radius: .5rem; transition: background .15s;"
-        onmouseover="this.style.background='#e9ecef'"
-        onmouseout="this.style.background='transparent'"
+        /* Увеличили ширину ячейки до 110px, чтобы увеличенный текст не ломался */
+        style={`text-decoration: none; min-width: 80px; max-width: 110px; gap: 8px; color: ${item.color};`}
+        onmouseover={`this.querySelector('.circle').style.background='${item.color}15'; this.querySelector('.circle').style.borderColor='${item.color}'`}
+        onmouseout={`this.querySelector('.circle').style.background='transparent'; this.querySelector('.circle').style.borderColor='${borderColor}'`}
       >
-        <span style={`color: ${item.color}; font-size: .8rem; line-height: 1.1; word-break: break-word;`}>
+        <!-- Увеличили шрифт до 0.85rem (было .62rem) и высоту контейнера до 32px -->
+        <span style="font-weight: 700; font-size: 0.85rem; line-height: 1.2; word-break: break-word; min-height: 32px; display: flex; align-items: flex-end; justify-content: center; padding-bottom: 2px;">
           {item.label}
         </span>
-        <i data-lucide={item.icon} style={`width:20px;height:20px;color:${item.color};`} class="mt-1"></i>
+
+        <!-- Круг увеличен с 44px до 66px. Обводка уменьшена с 2px до 1px -->
+        <span class="circle d-flex align-items-center justify-content-center" style={`width: 66px; height: 66px; border-radius: 50%; border: 1px solid ${borderColor}; background: transparent; transition: all .15s;`}>
+          <!-- Сама иконка внутри круга увеличена с 22px до 30px -->
+          <i data-lucide={item.icon} style={`width: 30px; height: 30px; color: ${item.color};`}></i>
+        </span>
       </a>
-    ))}
+      );
+    })}
     </nav>
   </div>
 </div>

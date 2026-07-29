@@ -4,7 +4,7 @@ export const CATEGORIES = {
   education: { label: 'Образование', icon: 'graduation-cap', color: '#198754' },
   sport: { label: 'Спорт', icon: 'dumbbell', color: '#fd7e14' },
   healthcare: { label: 'Здоровье', icon: 'heart-pulse', color: '#dc3545' },
-  social: { label: 'Соц. поддержка', icon: 'hand-heart', color: '#e83e8c' },
+  social: { label: 'Соц. услуги', icon: 'hand-heart', color: '#e83e8c' },
   landmarks: { label: 'Места', icon: 'map-pin', color: '#20c997' },
   directory: { label: 'Справочная', icon: 'phone', color: '#6610f2' },
   realty: { label: 'Недвижимость', icon: 'building', color: '#17a2b8' },

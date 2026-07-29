@@ -31,12 +31,12 @@ const categories = getCategories(allMeta);
 <Layout title={catInfo.label}>
   <Fragment slot="navbar"><Navbar /></Fragment>
   <Fragment slot="navstrip">
-    <NavStrip items={categories.map(c => ({ key: c.key, label: c.label, icon: c.icon, color: c.color }))} />
+    <NavStrip items={categories.map(c => ({ key: c.key, label: c.label, icon: c.icon, color: c.color }))} active={category} />
   </Fragment>
   <Fragment slot="footer"><Footer /></Fragment>
 
   <div class="d-flex align-items-center gap-2 mb-3">
-    <a href={base} class="btn btn-outline-secondary btn-sm">&larr; На главную</a>
+    <a href={base} class="btn btn-outline-secondary btn-sm d-inline-flex align-items-center"><i style="width:18px;height:18px;" class="me-1" data-lucide="chevron-left" />На главную</a>
     <span class="badge fs-6" style={`background: ${catInfo.color};`}>
       <i data-lucide={catInfo.icon} style="width:14px;height:14px;" class="me-1"></i>
       {catInfo.label}
