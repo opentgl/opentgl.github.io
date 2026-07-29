@@ -1,11 +1,22 @@
 import { listCSVFiles, loadCSV } from './parse-csv.js';
+import { listSheetFiles, loadSheet } from './google-sheets.js';
 import { detectCategory, extractDate, CATEGORIES } from './categories.js';
 import { unifyHeaders, unifyObject } from './column-map.js';
 
-export function loadAllMeta() {
-  const files = listCSVFiles();
-  return files.map(filename => {
-    const data = loadCSV(filename);
+const useSheets = !!import.meta.env.GOOGLE_SPREADSHEET_ID;
+
+async function listFiles() {
+  return useSheets ? await listSheetFiles() : listCSVFiles();
+}
+
+async function loadFile(filename) {
+  return useSheets ? await loadSheet(filename) : loadCSV(filename);
+}
+
+export async function loadAllMeta() {
+  const files = await listFiles();
+  return await Promise.all(files.map(async filename => {
+    const data = await loadFile(filename);
     const cat = detectCategory(filename);
     return {
       filename,
@@ -16,11 +27,11 @@ export function loadAllMeta() {
       rowCount: data.objects.length,
       headers: unifyHeaders(data.headers),
     };
-  });
+  }));
 }
 
-export function loadDataByFile(filename) {
-  const data = loadCSV(filename);
+export async function loadDataByFile(filename) {
+  const data = await loadFile(filename);
   return {
     headers: unifyHeaders(data.headers),
     objects: data.objects.map(unifyObject),

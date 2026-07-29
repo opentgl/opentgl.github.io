@@ -6,7 +6,7 @@ import NavStrip from '../components/NavStrip.astro';
 import { loadAllMeta, getCategories } from '../lib/csv-data.js';
 
 const base = import.meta.env.BASE_URL;
-const meta = loadAllMeta();
+const meta = await loadAllMeta();
 const categories = getCategories(meta);
 ---
 

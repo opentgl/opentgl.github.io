@@ -8,7 +8,7 @@ const pages = [
   { loc: `${base}/about/`, priority: '0.8' },
 ];
 
-const meta = loadAllMeta();
+const meta = await loadAllMeta();
 const categories = getCategories(meta);
 for (const cat of categories) {
   pages.push({ loc: `${base}/category/${cat.key}/`, priority: '0.9' });

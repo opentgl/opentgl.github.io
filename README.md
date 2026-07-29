@@ -6,7 +6,25 @@
 
 Портал открытых данных города Тольятти — транспорт, культура, образование, спорт, здравоохранение, недвижимость и инфраструктура.
 
-Статический сайт, сгенерированный [Astro](https://astro.build). Данные — из CSV-файлов, все страницы предварительно отрендерены на этапе сборки.
+Статический сайт, сгенерированный [Astro](https://astro.build). Данные — из Google Sheets (или CSV-файлов для fallback), все страницы предварительно отрендерены на этапе сборки.
+
+## Подготовка
+
+Скопируйте `.env.example` в `.env` и заполните:
+
+```bash
+cp .env.example .env
+```
+
+### Google Sheets (основной источник)
+
+1. Включите [Google Sheets API](https://console.cloud.google.com/apis/library/sheets.googleapis.com) в Google Cloud Console
+2. Создайте API-ключ и укажите его в `GOOGLE_API`
+3. Создайте Google Spreadsheet с листами, названия которых совпадают с именами CSV-файлов (см. `categories.js`)
+4. Сделайте таблицу доступной для чтения всем, у кого есть ссылка
+5. ID таблицы (из URL) укажите в `GOOGLE_SPREADSHEET_ID`
+
+Без `GOOGLE_SPREADSHEET_ID` данные читаются из локальных CSV-файлов (директория `example.csv/`).
 
 ## Локальный запуск
 
@@ -40,18 +58,16 @@ opentgl/
 │   │   └── category/
 │   │       └── [category].astro   # Страница категории
 │   └── lib/
-│       ├── parse-csv.js           # Парсинг CSV
+│       ├── parse-csv.js           # Парсинг CSV (fallback)
+│       ├── google-sheets.js       # Google Sheets API
 │       ├── categories.js          # Категории
 │       ├── column-map.js          # Унификация названий столбцов
 │       └── csv-data.js            # Загрузка данных
 ├── public/
 │   ├── favicon.svg
 │   └── css/style.css
-├── example.csv/                   # 25 CSV-файлов
 ├── .github/workflows/
-│   ├── static.yml                 # Деплой на GitHub Pages
-│   └── download-data.yml          # Загрузка из Google Drive
-└── scripts/download_gdrive_data.py
+│   └── astro.yml                  # Деплой на GitHub Pages
 ```
 
 ## Страницы
@@ -81,6 +97,9 @@ opentgl/
 
 Данные получены из открытых источников Администрации г.о. Тольятти.
 Распространяются по лицензии [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/).
+
+При сборке данные загружаются через Google Sheets API (по `GOOGLE_SPREADSHEET_ID`).
+Если `GOOGLE_SPREADSHEET_ID` не задан — данные читаются из локальных CSV-файлов.
 
 ## Стек
 
