@@ -1,11 +1,12 @@
-import { listSheetFiles, loadSheet } from './google-sheets.js';
+import { listSheetFiles, loadAllSheets } from './google-sheets.js';
 import { detectCategory, extractDate, CATEGORIES } from './categories.js';
 import { unifyHeaders, unifyObject } from './column-map.js';
 
 export async function loadAllMeta() {
   const files = await listSheetFiles();
-  return await Promise.all(files.map(async filename => {
-    const data = await loadSheet(filename);
+  const allData = await loadAllSheets(files);
+  return files.map(filename => {
+    const data = allData[filename] || { headers: [], objects: [] };
     const cat = detectCategory(filename);
     return {
       filename,
@@ -16,11 +17,12 @@ export async function loadAllMeta() {
       rowCount: data.objects.length,
       headers: unifyHeaders(data.headers),
     };
-  }));
+  });
 }
 
 export async function loadDataByFile(filename) {
-  const data = await loadSheet(filename);
+  const allData = await loadAllSheets([filename]);
+  const data = allData[filename] || { headers: [], objects: [] };
   return {
     headers: unifyHeaders(data.headers),
     objects: data.objects.map(unifyObject),
