@@ -1,5 +1,5 @@
-const API_KEY = process.env.GOOGLE_API;
-const SPREADSHEET_ID = process.env.GOOGLE_SPREADSHEET_ID;
+const API_KEY = import.meta.env.GOOGLE_API || process.env.GOOGLE_API;
+const SPREADSHEET_ID = import.meta.env.GOOGLE_SPREADSHEET_ID || process.env.GOOGLE_SPREADSHEET_ID;
 
 const BASE = 'https://sheets.googleapis.com/v4/spreadsheets';
 

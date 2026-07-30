@@ -1,8 +1,8 @@
 # Открытый Тольятти
-![GitHub License](https://img.shields.io/github/license/zhidkovers/opentgl)
-![GitHub Actions Workflow Status](https://img.shields.io/github/actions/workflow/status/zhidkovers/opentgl/astro.yml)
-![GitHub commit activity](https://img.shields.io/github/commit-activity/m/zhidkovers/opentgl)
-![Website](https://img.shields.io/website?url=https%3A%2F%2Fzhidkovers.github.io%2Fopentgl)
+![GitHub License](https://img.shields.io/github/license/opentgl/opentgl.github.io)
+![GitHub Actions Workflow Status](https://img.shields.io/github/actions/workflow/status/opentgl/opentgl.github.io/astro.yml)
+![GitHub commit activity](https://img.shields.io/github/commit-activity/m/opentgl/opentgl.github.io)
+![Website](https://img.shields.io/website?url=https%3A%2F%2Fopentgl.github.io)
 
 Портал открытых данных города Тольятти — транспорт, культура, образование, спорт, здравоохранение, недвижимость и инфраструктура.
 

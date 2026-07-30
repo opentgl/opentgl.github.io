@@ -54,8 +54,7 @@ jobs:
       - name: Build with Astro
         run: |
           ${{ steps.detect-package-manager.outputs.runner }} astro build \
-            --site "${{ steps.pages.outputs.origin }}" \
-            --base "${{ steps.pages.outputs.base_path }}/"
+            --site "https://opentgl.github.io"
         working-directory: ${{ env.BUILD_PATH }}
         env:
           GOOGLE_API: ${{ secrets.GOOGLE_API }}
