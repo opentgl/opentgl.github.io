@@ -1,0 +1,307 @@
+---
+import Layout from '../layouts/Layout.astro';
+import Navbar from '../components/Navbar.astro';
+import { loadRoutes, loadStopCoords, candidatesFor, pickPoint } from '../lib/routes.js';
+
+const coords = loadStopCoords();
+const routes = await loadRoutes();
+
+const routesData = routes.map(r => {
+  const points = [];
+  let prev = null;
+  for (const s of r.stops) {
+    const cands = candidatesFor(coords, s);
+    const c = pickPoint(cands, prev);
+    if (c) {
+      points.push({ name: s, lat: c.lat, lon: c.lon });
+      prev = c;
+    }
+  }
+  return {
+    id: r.id,
+    num: r.num,
+    name: r.name,
+    transport: r.transport,
+    color: r.color,
+    points,
+    totalStops: r.stops.length,
+  };
+});
+
+const groups = ['Автобус', 'Троллейбус', 'Маршрутное такси']
+  .map(transport => ({
+    transport,
+    items: routesData
+      .map((r, i) => ({ index: i, num: r.num, name: r.name, transport: r.transport }))
+      .filter(it => routesData[it.index].transport === transport)
+      .sort((a, b) => a.num.localeCompare(b.num, 'ru', { numeric: true })),
+  }))
+  .filter(g => g.items.length);
+---
+
+<Layout title="Маршруты на карте" hideHero fill>
+  <Fragment slot="navbar"><Navbar /></Fragment>
+
+  <style is:global>
+    mark {
+      background-color: #ffe066;
+      color: #000;
+      padding: 0 1px;
+      border-radius: 2px;
+    }
+  </style>
+
+  <style>
+    @media (min-width: 992px) {
+      .route-layout {
+        flex-grow: 1;
+        min-height: 0;
+        display: flex;
+        flex-direction: column;
+      }
+      .route-row {
+        flex-wrap: nowrap;
+        flex-grow: 1;
+        min-height: 0;
+      }
+      .route-side {
+        display: flex;
+        flex-direction: column;
+        min-height: 0;
+      }
+      .route-side .input-group {
+        flex-shrink: 0;
+      }
+      .route-groups {
+        flex-grow: 1;
+        min-height: 0;
+        overflow-y: auto;
+      }
+      .route-map-col {
+        display: flex;
+        min-height: 0;
+      }
+      .route-map {
+        flex: 1 1 auto;
+        min-height: 0;
+      }
+    }
+    @media (max-width: 991.98px) {
+      .route-groups {
+        max-height: 55vh;
+        overflow-y: auto;
+      }
+      .route-map {
+        height: 60vh;
+      }
+    }
+  </style>
+
+  <div class="route-layout">
+    <div class="row g-3 route-row">
+      <div class="col-lg-4 col-xl-3 route-side">
+        <div class="input-group mb-2">
+          <input id="route-search" type="search" class="form-control" placeholder="Поиск маршрута..." autocomplete="off" />
+          <span class="input-group-text"><i data-lucide="search" width="18" height="18" /></span>
+        </div>
+        <div id="route-filters" class="route-filters mb-2 d-flex flex-wrap gap-2">
+          {groups.map(g => (
+            <label class="form-check form-check-inline m-0 align-items-center gap-1">
+              <input class="form-check-input route-transport mt-0" type="checkbox" data-transport={g.transport} checked />
+              <span class="form-check-label small">{g.transport}</span>
+            </label>
+          ))}
+        </div>        <div id="route-groups" class="route-groups">
+          {groups.map(g => (
+            <section class="mb-3" data-group={g.transport}>
+              <h2 class="fs-6 fw-bold text-secondary border-bottom pb-1 mb-2">{g.transport}</h2>
+              <div class="list-group">
+                {g.items.map(it => (
+                  <button type="button" class="route-item list-group-item list-group-item-action d-flex align-items-center gap-2 py-2"
+                    data-index={it.index} data-num={it.num} data-name={it.name} data-search={it.num + ' ' + it.name}
+                    data-transport={it.transport}
+                    data-digits={it.num.replace(/[^0-9]/g, '')}>
+                    <span class="route-num badge rounded-pill text-bg-dark">{it.num}</span>
+                    <span class="route-name small">{it.name}</span>
+                  </button>
+                ))}
+              </div>
+            </section>
+          ))}
+        </div>
+      </div>
+      <div class="col-lg-8 col-xl-9 route-map-col">
+        <div id="map" class="route-map rounded shadow-sm"></div>
+      </div>
+    </div>
+  </div>
+
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script is:inline src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <div id="routes-data" hidden>{JSON.stringify(routesData)}</div>
+
+  <script is:inline>
+    (function () {
+      var data = JSON.parse(document.getElementById('routes-data').textContent);
+
+      var map = L.map('map', { zoomControl: true }).setView([53.5076, 49.4194], 12);
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 19,
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+      }).addTo(map);
+
+      var layerGroup = L.layerGroup().addTo(map);
+      window.addEventListener('load', function () { map.invalidateSize(); });
+
+      var items = Array.prototype.slice.call(document.querySelectorAll('.route-item'));
+      var groups = Array.prototype.slice.call(document.querySelectorAll('#route-groups > section'));
+      var checks = Array.prototype.slice.call(document.querySelectorAll('.route-transport'));
+      var search = document.getElementById('route-search');
+
+      function activeTransports() {
+        var set = {};
+        checks.forEach(function (cb) {
+          if (cb.checked) set[cb.dataset.transport] = true;
+        });
+        return set;
+      }
+
+      function esc(s) {
+        return String(s).replace(/[&<>"']/g, function (c) {
+          return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+        });
+      }
+
+      function mark(text, q) {
+        var s = String(text);
+        var idx = s.toLowerCase().indexOf(String(q).toLowerCase());
+        if (idx < 0) return esc(s);
+        return esc(s.slice(0, idx)) + '<mark>' + esc(s.slice(idx, idx + q.length)) + '</mark>' + esc(s.slice(idx + q.length));
+      }
+
+      function applySearch() {
+        var q = search.value.trim();
+        var ql = q.toLowerCase();
+        var numeric = /^\d+$/.test(q);
+        var active = activeTransports();
+        items.forEach(function (item) {
+          var numEl = item.querySelector('.route-num');
+          var nameEl = item.querySelector('.route-name');
+          var hit;
+          if (q) {
+            hit = numeric ? item.dataset.digits === q : item.dataset.search.toLowerCase().indexOf(ql) >= 0;
+          } else {
+            hit = true;
+          }
+          if (hit && !active[item.dataset.transport]) hit = false;
+          if (!hit) {
+            item.style.display = 'none';
+            return;
+          }
+          item.style.display = '';
+          if (q) {
+            numEl.innerHTML = item.dataset.num.toLowerCase().indexOf(ql) >= 0 ? mark(item.dataset.num, q) : esc(item.dataset.num);
+            nameEl.innerHTML = numeric ? esc(item.dataset.name) : mark(item.dataset.name, q);
+          } else {
+            numEl.innerHTML = esc(item.dataset.num);
+            nameEl.innerHTML = esc(item.dataset.name);
+          }
+        });
+        groups.forEach(function (g) {
+          var visible = Array.prototype.some.call(g.querySelectorAll('.route-item'), function (it) {
+            return it.style.display !== 'none';
+          });
+          g.style.display = visible ? '' : 'none';
+        });
+      }
+
+      search.addEventListener('input', applySearch);
+      checks.forEach(function (cb) {
+        cb.addEventListener('change', applySearch);
+      });
+
+      var routeCache = {};
+      var lineLayer = null;
+
+      function draw(route, index) {
+        layerGroup.clearLayers();
+        lineLayer = null;
+        if (!route || !route.points.length) return;
+
+        route.points.forEach(function (p, i) {
+          var marker = L.circleMarker([p.lat, p.lon], {
+            radius: 5,
+            fillColor: route.color,
+            color: '#fff',
+            weight: 1.5,
+            fillOpacity: 1,
+          });
+          marker.bindPopup('<strong>' + esc(p.name) + '</strong><br><small>Остановка ' + (i + 1) + ' из ' + route.points.length + '</small>');
+          marker.addTo(layerGroup);
+        });
+
+        drawAlongRoads(route, index);
+      }
+
+      function polylineOptions(route) {
+        return { color: route.color, weight: 4, opacity: 0.85 };
+      }
+
+      // Рисует линию строго по дорогам (OSRM). Если сервис недоступен —
+      // оставляет прямые отрезки между остановками.
+      function drawAlongRoads(route, index) {
+        if (!route.points.length || !window.fetch) return;
+        var cached = routeCache[route.id];
+        if (cached) {
+          if (activeIndex === index) {
+            lineLayer = L.polyline(cached, polylineOptions(route)).addTo(layerGroup);
+          }
+          return;
+        }
+        if (cached === false) {
+          if (activeIndex === index) {
+            lineLayer = L.polyline(route.points.map(function (p) { return [p.lat, p.lon]; }), polylineOptions(route)).addTo(layerGroup);
+          }
+          return;
+        }
+        lineLayer = L.polyline(route.points.map(function (p) { return [p.lat, p.lon]; }), polylineOptions(route)).addTo(layerGroup);
+        var coords = route.points.map(function (p) { return p.lon + ',' + p.lat; }).join(';');
+        var url = 'https://router.project-osrm.org/route/v1/driving/' + coords
+          + '?overview=full&geometries=geojson&alternatives=false';
+        fetch(url)
+          .then(function (r) { return r.json(); })
+          .then(function (j) {
+            if (!j || j.code !== 'Ok' || !j.routes || !j.routes.length) { routeCache[route.id] = false; return; }
+            var geom = (j.routes[0].geometry || {}).coordinates || [];
+            if (!geom.length) { routeCache[route.id] = false; return; }
+            routeCache[route.id] = geom.map(function (c) { return [c[1], c[0]]; });
+            if (activeIndex !== index) return;
+            if (lineLayer) layerGroup.removeLayer(lineLayer);
+            lineLayer = L.polyline(routeCache[route.id], polylineOptions(route)).addTo(layerGroup);
+          })
+          .catch(function () { routeCache[route.id] = false; });
+      }
+
+      var activeIndex = 0;
+
+      items.forEach(function (item) {
+        item.addEventListener('click', function () {
+          items.forEach(function (x) { x.classList.remove('active'); });
+          item.classList.add('active');
+          activeIndex = parseInt(item.dataset.index, 10);
+          draw(data[activeIndex], activeIndex);
+        });
+      });
+
+      applySearch();
+
+      var first = 0;
+      for (var i = 0; i < data.length; i++) {
+        if (data[i].points.length) { first = i; break; }
+      }
+      activeIndex = first;
+      if (items[first]) items[first].classList.add('active');
+      draw(data[first], first);
+    })();
+  </script>
+</Layout>

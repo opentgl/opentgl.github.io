@@ -8,6 +8,7 @@ export async function GET() {
   const urls = [
     { loc: '/', priority: '1.0', changefreq: 'weekly' },
     { loc: '/about/', priority: '0.8', changefreq: 'monthly' },
+    { loc: '/route/', priority: '0.8', changefreq: 'monthly' },
     ...categories.map(c => ({
       loc: `/category/${c.key}/`,
       priority: '0.6',

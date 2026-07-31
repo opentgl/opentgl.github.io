@@ -7,8 +7,10 @@ export const SITE_DESCRIPTION = 'Открытые данные города То
 export interface Props {
   title?: string;
   description?: string;
+  hideHero?: boolean;
+  fill?: boolean;
 }
-const { title, description } = Astro.props;
+const { title, description, hideHero, fill } = Astro.props;
 const pageTitle = title ? `${title} | ${SITE}` : SITE_TITLE;
 const pageDesc = description || SITE_DESCRIPTION;
 const truncatedTitle = pageTitle.length > 65 ? pageTitle.slice(0, 62) + '...' : pageTitle;
@@ -66,13 +68,15 @@ const imageUrl = `${SITE_URL}/og-image.png`;
     <link href={`${b}css/style.css`} rel="stylesheet" />
     <link rel="preload" href="https://unpkg.com/lucide@0.468.0/dist/umd/lucide.js" as="script" fetchpriority="high" />
   </head>
-  <body class="d-flex flex-column min-vh-100">
+  <body class={`d-flex flex-column min-vh-100 ${fill ? 'route-page' : ''}`}>
     <slot name="navbar" />
-    <div class="bg-dark text-white mt-2 mb-2 d-flex flex-column justify-content-center position-relative" style={`background-image: url('${b}plane.jpg'); background-size: cover; background-position: center; min-height: 300px;`}>
-      <div class="container py-4 py-md-5">
-        <h1 class="fw-bold m-0">Открытые данные Тольятти</h1>
+    {!hideHero && (
+      <div class="bg-dark text-white mt-2 mb-2 d-flex flex-column justify-content-center position-relative" style={`background-image: url('${b}plane.jpg'); background-size: cover; background-position: center; min-height: 300px;`}>
+        <div class="container py-4 py-md-5">
+          <h1 class="fw-bold m-0">Открытые данные Тольятти</h1>
+        </div>
       </div>
-    </div>
+    )}
     <slot name="navstrip" />
     <script is:inline src="https://unpkg.com/lucide@0.468.0/dist/umd/lucide.js"></script>
     <div class="app-body">
@@ -93,3 +97,43 @@ const imageUrl = `${SITE_URL}/og-image.png`;
     </script>
   </body>
 </html>
+
+<style is:global>
+  .route-page {
+    height: 100vh;
+    height: 100dvh;
+    overflow: hidden;
+  }
+  .route-page .app-body {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+  }
+  .route-page .app-body main {
+    flex: 1 1 auto;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+  }
+  .route-page .app-body main > .container {
+    flex-grow: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+  @media (max-width: 991.98px) {
+    .route-page {
+      height: auto;
+      overflow: visible;
+    }
+    .route-page .app-body main {
+      display: block;
+      flex: none;
+    }
+    .route-page .app-body main > .container {
+      display: block;
+      overflow: visible;
+    }
+  }
+</style>
