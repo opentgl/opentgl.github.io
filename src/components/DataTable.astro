@@ -11,20 +11,20 @@ function linkify(key, value) {
   const raw = String(value).trim();
   const k = key.toLowerCase();
   if (k.includes('почт') || k.includes('email') || k.includes('e-mail')) {
-    return raw.split(/[,;]/).map(e => e.trim()).filter(Boolean).map(e => `<i data-lucide="mail" style="width:14px;height:14px;" class="me-1"></i><a href="mailto:${esc(e)}" class="text-decoration-none">${esc(e)}</a>`).join('<br>');
+    return raw.split(/[,;]/).map(e => e.trim()).filter(Boolean).map(e => `<i data-lucide="mail" width="14" height="14" class="me-1"></i><a href="mailto:${esc(e)}" class="text-decoration-none">${esc(e)}</a>`).join('<br>');
   }
   if (k.includes('телефон') || k.includes('тел')) {
     return raw.split(/[,;]/).map(p => p.trim()).filter(Boolean).map(p => {
       const d = p.replace(/\D/g, '');
-      return d ? `<i data-lucide="phone" style="width:14px;height:14px;" class="me-1"></i><a href="tel:${d}" class="text-decoration-none">${esc(p)}</a>` : esc(p);
+      return d ? `<i data-lucide="phone" width="14" height="14" class="me-1"></i><a href="tel:${d}" class="text-decoration-none">${esc(p)}</a>` : esc(p);
     }).join('<br>');
   }
   if (k.includes('сайт') || k.includes('web') || k.includes('url')) {
     const url = raw.startsWith('http') ? raw : 'https://' + raw;
-    return `<i data-lucide="globe" style="width:14px;height:14px;" class="me-1"></i><a href="${esc(url)}" target="_blank" rel="noopener" class="text-decoration-none">${esc(raw)}</a>`;
+    return `<i data-lucide="globe" width="14" height="14" class="me-1"></i><a href="${esc(url)}" target="_blank" rel="noopener" class="text-decoration-none">${esc(raw)}</a>`;
   }
   if (k.includes('адрес') || k.includes('местополож') || k.includes('местонахожд')) {
-    return `<i data-lucide="map-pin" style="width:14px;height:14px;" class="me-1"></i><a href="https://2gis.ru/togliatti/search/${encodeURIComponent(raw)}" target="_blank" rel="noopener" class="text-decoration-none">${esc(raw)}</a>`;
+    return `<i data-lucide="map-pin" width="14" height="14" class="me-1"></i><a href="https://2gis.ru/togliatti/search/${encodeURIComponent(raw)}" target="_blank" rel="noopener" class="text-decoration-none">${esc(raw)}</a>`;
   }
   return esc(raw);
 }

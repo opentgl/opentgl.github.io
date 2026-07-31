@@ -30,7 +30,7 @@ const { items, active } = Astro.props;
         <!-- Круг увеличен с 44px до 66px. Обводка уменьшена с 2px до 1px -->
         <span class="circle d-flex align-items-center justify-content-center" style={`width: 66px; height: 66px; border-radius: 50%; border: 1px solid ${borderColor}; background: transparent; transition: all .15s;`}>
           <!-- Сама иконка внутри круга увеличена с 22px до 30px -->
-          <i data-lucide={item.icon} style={`width: 30px; height: 30px; color: ${item.color};`}></i>
+          <i data-lucide={item.icon} width="30" height="30" style={`color: ${item.color};`}></i>
         </span>
       </a>
       );
