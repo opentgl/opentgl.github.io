@@ -39,11 +39,15 @@ const categories = getCategories(meta);
       <div id="about" class="tab-section">
         <div class="card border-0 shadow-sm">
           <div class="card-body">
-            <h2 class="fs-4 fw-bold mb-3">
-              <a href={base} class="text-decoration-none">&larr; Главная</a>
+            <h2 class="fs-4 fw-bold mb-3 d-inline-flex align-items-center">
+              <a href={base} class="text-decoration-none d-inline-flex align-items-center">
+                <i style="width:28px;height:28px;" class="me-1 d-inline-block" data-lucide="chevron-left" />
+                Главная
+              </a>
               <span class="text-muted fw-light mx-2">/</span>
               О сайте
             </h2>
+
           </div>
         </div>
         <div class="card border-0 shadow-sm">
