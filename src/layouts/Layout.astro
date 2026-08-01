@@ -9,15 +9,36 @@ export interface Props {
   description?: string;
   hideHero?: boolean;
   fill?: boolean;
+  breadcrumbs?: { name: string; url: string }[];
+  faviconBase?: string;
 }
-const { title, description, hideHero, fill } = Astro.props;
+const { title, description, hideHero, fill, breadcrumbs, faviconBase } = Astro.props;
 const pageTitle = title ? `${title} | ${SITE}` : SITE_TITLE;
 const pageDesc = description || SITE_DESCRIPTION;
 const truncatedTitle = pageTitle.length > 65 ? pageTitle.slice(0, 62) + '...' : pageTitle;
 const truncatedDesc = pageDesc.length > 160 ? pageDesc.slice(0, 157) + '...' : pageDesc;
 const b = import.meta.env.BASE_URL;
+const iconBase = faviconBase ?? b;
 const canonical = Astro.url.href;
 const imageUrl = `${SITE_URL}/og-image.png`;
+const schemaJson = breadcrumbs
+  ? JSON.stringify({
+      '@context': 'https://schema.org',
+      '@type': 'BreadcrumbList',
+      itemListElement: breadcrumbs.map((c, i) => ({
+        '@type': 'ListItem',
+        position: i + 1,
+        name: c.name,
+        item: c.url,
+      })),
+    })
+  : JSON.stringify({
+      '@context': 'https://schema.org',
+      '@type': 'WebSite',
+      name: 'Открытый Тольятти',
+      alternateName: 'Open Togliatti',
+      url: 'https://opentgl.github.io',
+    });
 ---
 
 <!doctype html>
@@ -29,9 +50,9 @@ const imageUrl = `${SITE_URL}/og-image.png`;
     <meta name="description" content={truncatedDesc} />
     <link rel="canonical" href={canonical} />
 
-    <link rel="icon" href={`${b}favicon.ico`} sizes="any" media="(prefers-color-scheme: light)" type="image/x-icon">
-    <link rel="icon" href={`${b}dark/favicon.ico`} sizes="any" media="(prefers-color-scheme: dark)" type="image/x-icon">
-    <link rel="icon" href={`${b}favicon.svg`} type="image/svg+xml">
+    <link rel="icon" href={`${iconBase}favicon.ico`} sizes="any" media="(prefers-color-scheme: light)" type="image/x-icon">
+    <link rel="icon" href={`${iconBase}dark/favicon.ico`} sizes="any" media="(prefers-color-scheme: dark)" type="image/x-icon">
+    <link rel="icon" href={`${iconBase}favicon.svg`} type="image/svg+xml">
 
     <!-- Yandex Webmaster -->
     <meta name="yandex-verification" content="291a9c150f31096d" />
@@ -51,15 +72,7 @@ const imageUrl = `${SITE_URL}/og-image.png`;
     <meta name="twitter:description" content={truncatedDesc} />
     <meta name="twitter:image" content={imageUrl} />
 
-    <script type="application/ld+json">
-    {
-      "@context": "https://schema.org",
-      "@type": "WebSite",
-      "name": "Открытый Тольятти",
-      "alternateName": "Open Togliatti",
-      "url": "https://opentgl.github.io"
-    }
-    </script>
+    <script type="application/ld+json" set:html={schemaJson} />
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>

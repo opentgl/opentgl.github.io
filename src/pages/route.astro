@@ -47,7 +47,12 @@ const groups = ['Автобус', 'Троллейбус', 'Маршрутное 
   .filter(g => g.items.length);
 ---
 
-<Layout title="Маршруты на карте" hideHero fill>
+<Layout title="Маршруты на карте" hideHero fill
+  breadcrumbs={[
+    { name: 'Открытый Тольятти', url: 'https://opentgl.github.io' },
+    { name: 'Маршруты на карте', url: 'https://opentgl.github.io/route/' },
+  ]}
+  faviconBase="https://opentgl.github.io/">
   <Fragment slot="navbar"><Navbar /></Fragment>
 
   <style is:global>
