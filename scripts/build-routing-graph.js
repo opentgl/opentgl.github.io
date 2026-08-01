@@ -24,7 +24,6 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const OUT_FILE = join(__dirname, '..', 'public', 'data', 'graph-tolyatti.json');
 
 const BBOX = { minLat: 53.40, minLng: 49.15, maxLat: 53.62, maxLng: 49.58 };
-const OVERPASS = 'https://overpass-api.de/api/interpreter';
 
 // Типы дорог, по которым разрешён проезд/проход.
 const ROUTABLE = new Set([
@@ -44,21 +43,43 @@ function haversine(aLat, aLng, bLat, bLng) {
 }
 
 async function fetchOsm() {
-  const query = `[out:json][timeout:240];
+  const query = `[out:json][timeout:180];
 way["highway"](${BBOX.minLat},${BBOX.minLng},${BBOX.maxLat},${BBOX.maxLng});
 out body;
 >;
 out skel qt;`;
-  const res = await fetch(OVERPASS, {
-    method: 'POST',
-    headers: {
-      'User-Agent': 'opentgl-graph-builder/1.0 (open-data portal Togliatti)',
-      'Accept': 'application/json',
-    },
-    body: new URLSearchParams({ data: query }),
-  });
-  if (!res.ok) throw new Error(`Overpass API: HTTP ${res.status} — ${await res.text()}`);
-  return res.json();
+  // Зеркала Overpass API — основной сервер часто перегружен (HTTP 504).
+  const endpoints = [
+    'https://overpass-api.de/api/interpreter',
+    'https://overpass.kumi.systems/api/interpreter',
+    'https://overpass.private.coffee/api/interpreter',
+    'https://overpass.osm.ch/api/interpreter',
+    'https://overpass.openstreetmap.fr/api/interpreter',
+  ];
+  let lastErr;
+  for (let attempt = 0; attempt < 3; attempt++) {
+    for (const url of endpoints) {
+      try {
+        const res = await fetch(url, {
+          method: 'POST',
+          headers: {
+            'User-Agent': 'opentgl-graph-builder/1.0 (open-data portal Togliatti)',
+            'Accept': 'application/json',
+          },
+          body: new URLSearchParams({ data: query }),
+        });
+        if (!res.ok) throw new Error(`HTTP ${res.status} — ${(await res.text()).slice(0, 300)}`);
+        return res.json();
+      } catch (err) {
+        lastErr = err;
+        console.warn(`Overpass ${url}: ${err.message}`);
+      }
+    }
+    const pause = 5000 * (attempt + 1);
+    console.warn(`Все зеркала недоступны, повтор через ${pause / 1000} с...`);
+    await new Promise(r => setTimeout(r, pause));
+  }
+  throw new Error(`Overpass API: все зеркала недоступны — ${lastErr.message}`);
 }
 
 function isOnewayForward(tags) {
