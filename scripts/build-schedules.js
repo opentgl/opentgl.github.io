@@ -46,8 +46,6 @@ async function fetchWithRetry(url, retries = 3) {
   }
 }
 
-const sleep = ms => new Promise(r => setTimeout(r, ms));
-
 // «№ 15в », «93к (Оптовый рынок) » -> «15в», «93к»
 function normalizeNum(raw) {
   return String(raw || '')
@@ -142,26 +140,28 @@ rmSync(OUT_DIR, { recursive: true, force: true });
 mkdirSync(OUT_DIR, { recursive: true });
 
 const index = [];
-for (const t of titles) {
-  const num = normalizeNum(t);
-  const range = encodeURIComponent(`${t}!A:Z`);
-  const res = await fetchWithRetry(`${BASE}/${SPREADSHEET_ID}/values/${range}?key=${API_KEY}`);
-  const body = await res.json();
-  const parsed = parseSchedule(body.values || []);
+
+// Скачиваем все листы одним batchGet-запросом, чтобы не упираться
+// в минутную квоту API (58 отдельных запросов — это много).
+const ranges = titles.map(t => encodeURIComponent(`${t}!A:Z`)).join('&ranges=');
+const res = await fetchWithRetry(`${BASE}/${SPREADSHEET_ID}/values:batchGet?key=${API_KEY}&ranges=${ranges}`);
+const body = await res.json();
+
+for (const vr of body.valueRanges || []) {
+  const sheetName = vr.range.split('!')[0].replace(/'/g, '');
+  const num = normalizeNum(sheetName);
+  const parsed = parseSchedule(vr.values || []);
   if (!parsed) {
-    console.log(`skip: ${JSON.stringify(t)} (нет данных)`);
-    await sleep(120);
+    console.log(`skip: ${JSON.stringify(sheetName)} (нет данных)`);
     continue;
   }
   if (index.includes(num)) {
-    console.log(`skip: ${JSON.stringify(t)} (дубликат номера ${num})`);
-    await sleep(120);
+    console.log(`skip: ${JSON.stringify(sheetName)} (дубликат номера ${num})`);
     continue;
   }
   index.push(num);
   writeFileSync(join(OUT_DIR, `${num}.json`), JSON.stringify(parsed));
-  console.log(`ok:   ${JSON.stringify(t)} -> ${num}.json (${parsed.groups.length} групп)`);
-  await sleep(120);
+  console.log(`ok:   ${JSON.stringify(sheetName)} -> ${num}.json (${parsed.groups.length} групп)`);
 }
 
 index.sort((a, b) => a.localeCompare(b, 'ru', { numeric: true }));
