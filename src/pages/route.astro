@@ -1,10 +1,17 @@
 ---
+import { readFileSync } from 'node:fs';
 import Layout from '../layouts/Layout.astro';
 import Navbar from '../components/Navbar.astro';
 import { loadRoutes, loadStopCoords, candidatesFor, pickPoint } from '../lib/routes.js';
 
 const coords = loadStopCoords();
 const routes = await loadRoutes();
+
+const normNum = s => String(s || '').replace(/[№#\s]/g, '').trim();
+let scheduleNums = new Set();
+try {
+  scheduleNums = new Set(JSON.parse(readFileSync(new URL('../../public/data/schedules/index.json', import.meta.url), 'utf8')));
+} catch {}
 
 const routesData = routes.map(r => {
   const points = [];
@@ -25,6 +32,7 @@ const routesData = routes.map(r => {
     color: r.color,
     points,
     totalStops: r.stops.length,
+    hasSchedule: scheduleNums.has(normNum(r.num)),
   };
 });
 
@@ -32,7 +40,7 @@ const groups = ['Автобус', 'Троллейбус', 'Маршрутное 
   .map(transport => ({
     transport,
     items: routesData
-      .map((r, i) => ({ index: i, num: r.num, name: r.name, transport: r.transport }))
+      .map((r, i) => ({ index: i, num: r.num, name: r.name, transport: r.transport, hasSchedule: r.hasSchedule }))
       .filter(it => routesData[it.index].transport === transport)
       .sort((a, b) => a.num.localeCompare(b.num, 'ru', { numeric: true })),
   }))
@@ -49,9 +57,67 @@ const groups = ['Автобус', 'Троллейбус', 'Маршрутное 
       padding: 0 1px;
       border-radius: 2px;
     }
+    .route-item.has-schedule {
+      background-color: #f0f7ff;
+    }
+    .route-item.has-schedule .route-num {
+      background-color: #0d6efd;
+    }
+    .route-item .schedule-badge {
+      color: #0d6efd;
+    }
+    .route-item.active .schedule-badge {
+      color: #fff;
+    }
+    .route-item.active.has-schedule {
+      background-color: var(--bs-list-group-active-bg, #0d6efd);
+      border-color: var(--bs-list-group-active-border-color, #0d6efd);
+      color: var(--bs-list-group-active-color, #fff);
+    }
+    .route-item.active.has-schedule .route-num {
+      background-color: #212529;
+    }
+    #schedule-btn.available {
+      background-color: #0d6efd;
+      border-color: #0d6efd;
+      color: #fff;
+    }
+    #schedule-btn.available:hover {
+      background-color: #0b5ed7;
+      border-color: #0a58ca;
+      color: #fff;
+    }
+    #schedule-btn.available:active {
+      background-color: #0a58ca;
+      border-color: #0a53be;
+      color: #fff;
+    }
+    #schedule-btn:not(.available) {
+      background-color: #6c757d;
+      border-color: #6c757d;
+      color: #fff;
+    }
+    #schedule-btn:not(.available):hover {
+      background-color: #5c636a;
+      border-color: #565e64;
+    }
   </style>
 
   <style>
+    .route-groups-card {
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+      border-radius: 0.75rem;
+      overflow: hidden;
+    }
+    .route-groups-card .card-body {
+      flex: 1 1 auto;
+      min-height: 0;
+      padding: 0.375rem;
+      display: flex;
+      flex-direction: column;
+    }
     @media (min-width: 992px) {
       .route-layout {
         flex-grow: 1;
@@ -71,6 +137,9 @@ const groups = ['Автобус', 'Троллейбус', 'Маршрутное 
       }
       .route-side .input-group {
         flex-shrink: 0;
+      }
+      .route-groups-card {
+        flex-grow: 1;
       }
       .route-groups {
         flex-grow: 1;
@@ -104,34 +173,60 @@ const groups = ['Автобус', 'Троллейбус', 'Маршрутное 
           <input id="route-search" type="search" class="form-control" placeholder="Поиск маршрута..." autocomplete="off" />
           <span class="input-group-text"><i data-lucide="search" width="18" height="18" /></span>
         </div>
-        <div id="route-filters" class="route-filters mb-2 d-flex flex-wrap gap-2">
+        <select id="route-transport-filter" class="form-select mb-2" aria-label="Фильтр по виду транспорта">
+          <option value="all">Все виды транспорта</option>
           {groups.map(g => (
-            <label class="form-check form-check-inline m-0 align-items-center gap-1">
-              <input class="form-check-input route-transport mt-0" type="checkbox" data-transport={g.transport} checked />
-              <span class="form-check-label small">{g.transport}</span>
-            </label>
+            <option value={g.transport}>{g.transport}</option>
           ))}
-        </div>        <div id="route-groups" class="route-groups">
-          {groups.map(g => (
-            <section class="mb-3" data-group={g.transport}>
-              <h2 class="fs-6 fw-bold text-secondary border-bottom pb-1 mb-2">{g.transport}</h2>
-              <div class="list-group">
-                {g.items.map(it => (
-                  <button type="button" class="route-item list-group-item list-group-item-action d-flex align-items-center gap-2 py-2"
-                    data-index={it.index} data-num={it.num} data-name={it.name} data-search={it.num + ' ' + it.name}
-                    data-transport={it.transport}
-                    data-digits={it.num.replace(/[^0-9]/g, '')}>
-                    <span class="route-num badge rounded-pill text-bg-dark">{it.num}</span>
-                    <span class="route-name small">{it.name}</span>
-                  </button>
-                ))}
-              </div>
-            </section>
-          ))}
+        </select>
+        <div class="card route-groups-card">
+          <div class="card-body">
+            <div id="route-groups" class="route-groups">
+              {groups.map(g => (
+                <section class="mb-3" data-group={g.transport}>
+                  <h2 class="fs-6 fw-bold text-secondary border-bottom pb-1 mb-2">{g.transport}</h2>
+                  <div class="list-group">
+                    {g.items.map(it => (
+                      <button type="button" class={"route-item list-group-item list-group-item-action d-flex align-items-center gap-2 py-2" + (it.hasSchedule ? ' has-schedule' : '')}
+                        data-index={it.index} data-num={it.num} data-name={it.name}
+                        data-transport={it.transport}>
+                        <span class="route-num badge rounded-pill text-bg-dark">{it.num}</span>
+                        <span class="route-name small" data-orig-name={it.name}>{it.name}</span>
+                        {it.hasSchedule && (
+                          <span class="schedule-badge ms-auto" title="Есть расписание">
+                            <i data-lucide="calendar-clock" width="14" height="14" />
+                          </span>
+                        )}
+                      </button>
+                    ))}
+                  </div>
+                </section>
+              ))}
+            </div>
+          </div>
         </div>
+        <button type="button" id="schedule-btn" class="btn w-100 mt-2" disabled>
+          <i data-lucide="calendar-clock" width="16" height="16" class="me-1" />
+          <span id="schedule-btn-label">Расписание</span>
+        </button>
       </div>
       <div class="col-lg-8 col-xl-9 route-map-col">
         <div id="map" class="route-map rounded shadow-sm"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal fade" id="schedule-modal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="schedule-modal-title">Расписание</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Закрыть"></button>
+        </div>
+        <div class="modal-body" id="schedule-modal-body"></div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Закрыть</button>
+        </div>
       </div>
     </div>
   </div>
@@ -155,13 +250,23 @@ const groups = ['Автобус', 'Троллейбус', 'Маршрутное 
 
       var items = Array.prototype.slice.call(document.querySelectorAll('.route-item'));
       var groups = Array.prototype.slice.call(document.querySelectorAll('#route-groups > section'));
-      var checks = Array.prototype.slice.call(document.querySelectorAll('.route-transport'));
+      var transportFilter = document.getElementById('route-transport-filter');
       var search = document.getElementById('route-search');
+      var scheduleBtn = document.getElementById('schedule-btn');
+      var scheduleBtnLabel = document.getElementById('schedule-btn-label');
+      var scheduleModalEl = document.getElementById('schedule-modal');
+      var scheduleModalTitle = document.getElementById('schedule-modal-title');
+      var scheduleModalBody = document.getElementById('schedule-modal-body');
+
+      function normNum(s) {
+        return String(s == null ? '' : s).replace(/[№#\s]/g, '').trim();
+      }
 
       function activeTransports() {
+        var v = transportFilter.value;
         var set = {};
-        checks.forEach(function (cb) {
-          if (cb.checked) set[cb.dataset.transport] = true;
+        Array.prototype.forEach.call(transportFilter.querySelectorAll('option'), function (o) {
+          if (v === 'all' || o.value === v) set[o.value] = true;
         });
         return set;
       }
@@ -172,40 +277,39 @@ const groups = ['Автобус', 'Троллейбус', 'Маршрутное 
         });
       }
 
-      function mark(text, q) {
+      // Выделяет ВСЕ вхождения запроса в строке жёлтым (без учёта регистра).
+      function markAll(text, ql) {
         var s = String(text);
-        var idx = s.toLowerCase().indexOf(String(q).toLowerCase());
-        if (idx < 0) return esc(s);
-        return esc(s.slice(0, idx)) + '<mark>' + esc(s.slice(idx, idx + q.length)) + '</mark>' + esc(s.slice(idx + q.length));
+        var sl = s.toLowerCase();
+        var q = String(ql);
+        var out = '';
+        var i = 0, idx;
+        while ((idx = sl.indexOf(q, i)) >= 0) {
+          out += esc(s.slice(i, idx)) + '<mark>' + esc(s.slice(idx, idx + q.length)) + '</mark>';
+          i = idx + q.length;
+        }
+        out += esc(s.slice(i));
+        return out;
       }
 
       function applySearch() {
         var q = search.value.trim();
         var ql = q.toLowerCase();
-        var numeric = /^\d+$/.test(q);
         var active = activeTransports();
         items.forEach(function (item) {
-          var numEl = item.querySelector('.route-num');
           var nameEl = item.querySelector('.route-name');
-          var hit;
-          if (q) {
-            hit = numeric ? item.dataset.digits === q : item.dataset.search.toLowerCase().indexOf(ql) >= 0;
-          } else {
-            hit = true;
-          }
+          // Оригинальное название всегда в data-orig-name — mark'и его не меняют,
+          // поэтому фильтр всегда ищет по исходному тексту, а не по подсветке.
+          var orig = nameEl ? nameEl.dataset.origName : '';
+          var hit = ql ? orig.toLowerCase().indexOf(ql) >= 0 : true;
           if (hit && !active[item.dataset.transport]) hit = false;
           if (!hit) {
-            item.style.display = 'none';
+            item.style.setProperty('display', 'none', 'important');
+            if (nameEl) nameEl.innerHTML = esc(orig);
             return;
           }
-          item.style.display = '';
-          if (q) {
-            numEl.innerHTML = item.dataset.num.toLowerCase().indexOf(ql) >= 0 ? mark(item.dataset.num, q) : esc(item.dataset.num);
-            nameEl.innerHTML = numeric ? esc(item.dataset.name) : mark(item.dataset.name, q);
-          } else {
-            numEl.innerHTML = esc(item.dataset.num);
-            nameEl.innerHTML = esc(item.dataset.name);
-          }
+          item.style.removeProperty('display');
+          if (nameEl) nameEl.innerHTML = ql ? markAll(orig, ql) : esc(orig);
         });
         groups.forEach(function (g) {
           var visible = Array.prototype.some.call(g.querySelectorAll('.route-item'), function (it) {
@@ -216,8 +320,57 @@ const groups = ['Автобус', 'Троллейбус', 'Маршрутное 
       }
 
       search.addEventListener('input', applySearch);
-      checks.forEach(function (cb) {
-        cb.addEventListener('change', applySearch);
+      transportFilter.addEventListener('change', applySearch);
+
+      function updateScheduleButton() {
+        var r = data[activeIndex];
+        var avail = !!(r && r.hasSchedule);
+        scheduleBtn.disabled = !avail;
+        scheduleBtnLabel.textContent = avail ? 'Доступно расписание' : 'Расписание';
+        scheduleBtn.classList.toggle('available', avail);
+      }
+
+      function renderSchedule(sch) {
+        var out = '';
+        if (sch.title) out += '<div class="fs-5 fw-semibold">' + esc(sch.title) + '</div>';
+        if (sch.name) out += '<div class="text-secondary">' + esc(sch.name) + '</div>';
+        if (sch.date) out += '<div class="text-secondary small mb-2">Действует с ' + esc(sch.date) + '</div>';
+        (sch.groups || []).forEach(function (g) {
+          out += '<div class="mb-3">';
+          out += '<div class="fw-semibold border-bottom pb-1 mb-2">' + esc(g.label) + '</div>';
+          out += '<div class="table-responsive"><table class="table table-sm table-bordered align-middle mb-0"><thead><tr>';
+          g.columns.forEach(function (c) { out += '<th scope="col">' + esc(c.stop || '') + '</th>'; });
+          out += '</tr></thead><tbody>';
+          var n = 0;
+          g.columns.forEach(function (c) { if (c.times.length > n) n = c.times.length; });
+          for (var i = 0; i < n; i++) {
+            out += '<tr>';
+            g.columns.forEach(function (c) { out += '<td>' + esc(c.times[i] || '') + '</td>'; });
+            out += '</tr>';
+          }
+          out += '</tbody></table></div></div>';
+        });
+        return out;
+      }
+
+      scheduleBtn.addEventListener('click', function () {
+        var r = data[activeIndex];
+        if (!r || !r.hasSchedule) return;
+        var num = encodeURIComponent(normNum(r.num));
+        fetch('/data/schedules/' + num + '.json')
+          .then(function (res) {
+            if (!res.ok) throw new Error('HTTP ' + res.status);
+            return res.json();
+          })
+          .then(function (sch) {
+            scheduleModalTitle.textContent = r.num ? ('Расписание маршрута № ' + r.num.replace(/№\s*/i, '')) : 'Расписание';
+            scheduleModalBody.innerHTML = renderSchedule(sch);
+            bootstrap.Modal.getOrCreateInstance(scheduleModalEl).show();
+          })
+          .catch(function (err) {
+            scheduleModalBody.innerHTML = '<div class="text-danger">Не удалось загрузить расписание: ' + esc(err.message) + '</div>';
+            bootstrap.Modal.getOrCreateInstance(scheduleModalEl).show();
+          });
       });
 
       var routeCache = {};
@@ -247,42 +400,47 @@ const groups = ['Автобус', 'Троллейбус', 'Маршрутное 
         return { color: route.color, weight: 4, opacity: 0.85 };
       }
 
-      // Рисует линию строго по дорогам (OSRM). Если сервис недоступен —
-      // оставляет прямые отрезки между остановками.
+      // Рисует линию строго по дорогам — локально, A* по графу OSM (Web Worker).
+      // Пока граф не готов или маршрут не посчитан — прямые отрезки между остановками.
+      function setLine(coords, route) {
+        if (lineLayer) layerGroup.removeLayer(lineLayer);
+        lineLayer = L.polyline(coords, polylineOptions(route)).addTo(layerGroup);
+      }
+
       function drawAlongRoads(route, index) {
         if (!route.points.length || !window.fetch) return;
         var cached = routeCache[route.id];
         if (cached) {
-          if (activeIndex === index) {
-            lineLayer = L.polyline(cached, polylineOptions(route)).addTo(layerGroup);
-          }
+          if (activeIndex === index) setLine(cached, route);
           return;
         }
         if (cached === false) {
-          if (activeIndex === index) {
-            lineLayer = L.polyline(route.points.map(function (p) { return [p.lat, p.lon]; }), polylineOptions(route)).addTo(layerGroup);
-          }
+          if (activeIndex === index) setLine(route.points.map(function (p) { return [p.lat, p.lon]; }), route);
           return;
         }
-        lineLayer = L.polyline(route.points.map(function (p) { return [p.lat, p.lon]; }), polylineOptions(route)).addTo(layerGroup);
-        var coords = route.points.map(function (p) { return p.lon + ',' + p.lat; }).join(';');
-        var url = 'https://router.project-osrm.org/route/v1/driving/' + coords
-          + '?overview=full&geometries=geojson&alternatives=false';
-        fetch(url)
-          .then(function (r) { return r.json(); })
-          .then(function (j) {
-            if (!j || j.code !== 'Ok' || !j.routes || !j.routes.length) { routeCache[route.id] = false; return; }
-            var geom = (j.routes[0].geometry || {}).coordinates || [];
-            if (!geom.length) { routeCache[route.id] = false; return; }
-            routeCache[route.id] = geom.map(function (c) { return [c[1], c[0]]; });
-            if (activeIndex !== index) return;
-            if (lineLayer) layerGroup.removeLayer(lineLayer);
-            lineLayer = L.polyline(routeCache[route.id], polylineOptions(route)).addTo(layerGroup);
-          })
-          .catch(function () { routeCache[route.id] = false; });
+        setLine(route.points.map(function (p) { return [p.lat, p.lon]; }), route);
+        if (!window.routeOnRoads) return;
+        window.routeOnRoads(route.points).then(function (coords) {
+          if (!coords || !coords.length) { routeCache[route.id] = false; return; }
+          routeCache[route.id] = coords;
+          if (activeIndex !== index) return;
+          setLine(coords, route);
+        }).catch(function () { routeCache[route.id] = false; });
       }
 
       var activeIndex = 0;
+
+      // Вызывается модулем клиентского роутинга, когда граф дорог загрузился:
+      // пересчитывает текущий маршрут по дорогам вместо прямых отрезков.
+      window.__routingRefresh = function () {
+        if (!data || activeIndex === undefined) return;
+        var r = data[activeIndex];
+        if (!r || routeCache[r.id] !== undefined) return;
+        drawAlongRoads(r, activeIndex);
+      };
+      window.__routingError = function (message) {
+        console.warn('Маршрутизация по дорогам недоступна: ' + message);
+      };
 
       items.forEach(function (item) {
         item.addEventListener('click', function () {
@@ -290,6 +448,7 @@ const groups = ['Автобус', 'Троллейбус', 'Маршрутное 
           item.classList.add('active');
           activeIndex = parseInt(item.dataset.index, 10);
           draw(data[activeIndex], activeIndex);
+          updateScheduleButton();
         });
       });
 
@@ -302,6 +461,13 @@ const groups = ['Автобус', 'Троллейбус', 'Маршрутное 
       activeIndex = first;
       if (items[first]) items[first].classList.add('active');
       draw(data[first], first);
+      updateScheduleButton();
     })();
+  </script>
+
+  <script>
+    import { routeOnRoads } from '../lib/routing/route-app.js';
+    window.routeOnRoads = routeOnRoads;
+    if (window.__routingRefresh) window.__routingRefresh();
   </script>
 </Layout>

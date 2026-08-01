@@ -51,6 +51,15 @@ jobs:
       - name: Install dependencies
         run: ${{ steps.detect-package-manager.outputs.manager }} ${{ steps.detect-package-manager.outputs.command }}
         working-directory: ${{ env.BUILD_PATH }}
+      - name: Build road graph
+        run: node scripts/build-routing-graph.js
+        working-directory: ${{ env.BUILD_PATH }}
+      - name: Build schedules
+        run: node scripts/build-schedules.js
+        working-directory: ${{ env.BUILD_PATH }}
+        env:
+          GOOGLE_API: ${{ secrets.GOOGLE_API }}
+          GOOGLE_SCHEDULE_ID: ${{ secrets.GOOGLE_SCHEDULE_ID }}
       - name: Build with Astro
         run: |
           ${{ steps.detect-package-manager.outputs.runner }} astro build \
