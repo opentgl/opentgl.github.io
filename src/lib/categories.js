@@ -39,6 +39,31 @@ export const FILE_CATEGORY = [
   { pattern: 'inzhenernoy-infrastruktura', cat: 'infrastructure', sub: 'Инженерная инфраструктура' },
 ];
 
+// Человекочитаемые/короткие идентификаторы для ссылок на карту.
+// Ключи категорий (culture, sport, ...) остаются прежними, а для подкатегорий
+// используем имя файла без даты и служебных суффиксов.
+export const MAP_FILTER_ALIASES = {
+  sport_schools: 'sportivnye-shkoly',
+  sport_school: 'sportivnye-shkoly',
+  libraries: 'biblioteki',
+  museums: 'muzei',
+  theaters: 'teatri',
+  theatres: 'teatri',
+  pools: 'basseyny',
+};
+
+export function fileSlug(filename) {
+  return String(filename || '')
+    .replace(/\.csv$/i, '')
+    .replace(/^\d{4}[-_]\d{2}[-_]\d{2}[-_]?/, '')
+    .replace(/^opendata[_-]?/i, '')
+    .replace(/[_-]?file[_-]?\d+$/i, '')
+    .replace(/[_\s]+/g, '-')
+    .replace(/-+/g, '-')
+    .replace(/^-|-$/g, '')
+    .toLowerCase();
+}
+
 export function detectCategory(filename) {
   const f = filename.toLowerCase();
   for (const entry of FILE_CATEGORY) {

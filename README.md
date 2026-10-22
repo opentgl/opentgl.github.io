@@ -40,11 +40,40 @@ npm run build
 npm run preview  # просмотр собранного сайта
 ```
 
+## Карта объектов
+
+`/map` — интерактивная карта на Leaflet и OpenStreetMap:
+
+- фильтры по категориям и подкатегориям, состояние хранится в `?category=...`;
+- кластеризация маркеров и попапы с названием, адресом и контактами: email, телефон и сайт (только если они есть в данных);
+- при открытии без параметров в URL сразу проставляются категории, включённые по умолчанию;
+- недвижимость и инфраструктура выключены по умолчанию, но доступны в фильтрах;
+- образование на карту не выводится: школы, детские сады и вузы уже отмечены на базовой карте OSM, при этом таблицы категории «Образование» остаются на сайте.
+
+Координаты берутся из локальной базы `src/data/geo-cache.json`. Во время `astro build` внешние геокодеры не вызываются — карта собирается полностью офлайн. Статический endpoint: `/data/geo.json`.
+
+Обновление базы координат (нужен доступ к Google Sheets и Overpass API):
+
+```bash
+node scripts/geocode-addresses.mjs
+```
+
+Полезные флаги:
+
+```bash
+node scripts/geocode-addresses.mjs --refresh    # заново скачать адресные точки OSM
+node scripts/geocode-addresses.mjs --nominatim  # добить остатки через Nominatim
+```
+
+Сырой кэш OSM сохраняется в `.cache/osm-addresses.json` и не коммитится. Итоговый `src/data/geo-cache.json` нужно коммитить вместе с изменениями данных.
+
 ## Структура проекта
 
 ```
 opentgl/
 ├── astro.config.mjs               # Конфиг Astro (site, base для GitHub Pages)
+├── scripts/
+│   └── geocode-addresses.mjs      # Обновление локальной базы координат
 ├── src/
 │   ├── layouts/Layout.astro       # Базовый layout (SEO, хедер, герой, футер)
 │   ├── components/
@@ -52,9 +81,13 @@ opentgl/
 │   │   ├── NavStrip.astro         # Стрип категорий
 │   │   ├── DataTable.astro        # Таблица с данными
 │   │   └── Footer.astro           # Подвал
+│   ├── data/
+│   │   └── geo-cache.json         # Локальная база «адрес → координаты»
 │   ├── pages/
 │   │   ├── index.astro            # Главная
 │   │   ├── about.astro            # О сайте
+│   │   ├── map.astro              # Интерактивная карта
+│   │   ├── data/geo.json.js       # Статический GeoJSON для карты
 │   │   └── category/
 │   │       └── [category].astro   # Страница категории
 │   └── lib/
@@ -62,7 +95,9 @@ opentgl/
 │       ├── google-sheets.js       # Google Sheets API
 │       ├── categories.js          # Категории
 │       ├── column-map.js          # Унификация названий столбцов
-│       └── csv-data.js            # Загрузка данных
+│       ├── csv-data.js            # Загрузка данных
+│       ├── address-match.js       # Нормализация адресов и названий
+│       └── geo.js                 # Сборка GeoJSON и адресов образования
 ├── public/
 │   ├── favicon.svg
 │   └── css/style.css
@@ -76,6 +111,8 @@ opentgl/
 |---------|----------|
 | `/` | Главная — карточки категорий |
 | `/category/:cat` | Список записей категории |
+| `/map` | Интерактивная карта объектов |
+| `/data/geo.json` | GeoJSON с точками для карты |
 | `/about` | О сайте |
 
 ## Категории
@@ -106,6 +143,8 @@ opentgl/
 <img height="14" width="14" src="https://cdn.simpleicons.org/astro/white" /> **Astro** — генерация статических страниц
 
 <img height="14" width="14" src="https://cdn.simpleicons.org/bootstrap/white" /> **Bootstrap 5** — CSS (CDN)
+
+<img height="14" width="14" src="https://cdn.simpleicons.org/leaflet/white" /> **Leaflet** — интерактивная карта (CDN)
 
 <img height="14" width="14" src="https://cdn.simpleicons.org/lucide/white" /> **Lucide Icons** — иконки (CDN)
 

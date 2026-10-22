@@ -1,6 +1,8 @@
 const COLUMN_ALIASES = [
   { match: /^№\s*п\/п$|^N\s*п\/п$|^№п\/п$|^№$|^n\/n$/i, target: '№' },
-  { match: /наименован|название|name|title/i, target: 'Наименование' },
+  // \b не даёт принять служебные колонки Google Sheets («Unnamed: 5»)
+  // за название и перезаписать реальное значение пустой строкой.
+  { match: /наименован|название|\bname\b|\btitle\b/i, target: 'Наименование' },
   { match: /email|e-mail|e_mail|электронн(ая|ый)|почт/i, target: 'Email' },
   { match: /руководител|директор|director|fio|фио/i, target: 'Руководитель' },
   { match: /телефон|телефоны|контакт|контакты|phone|phonenumber|\bтел\.?\b/i, target: 'Телефон' },

@@ -11,8 +11,10 @@ export interface Props {
   fill?: boolean;
   breadcrumbs?: { name: string; url: string }[];
   faviconBase?: string;
+  /** Дополнительный класс для <body> (например, map-page). */
+  bodyClass?: string;
 }
-const { title, description, hideHero, fill, breadcrumbs, faviconBase } = Astro.props;
+const { title, description, hideHero, fill, breadcrumbs, faviconBase, bodyClass } = Astro.props;
 const pageTitle = title ? `${title} | ${SITE}` : SITE_TITLE;
 const pageDesc = description || SITE_DESCRIPTION;
 const truncatedTitle = pageTitle.length > 65 ? pageTitle.slice(0, 62) + '...' : pageTitle;
@@ -80,8 +82,9 @@ const schemaJson = breadcrumbs
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" />
     <link href={`${b}css/style.css`} rel="stylesheet" />
     <link rel="preload" href="https://unpkg.com/lucide@0.468.0/dist/umd/lucide.js" as="script" fetchpriority="high" />
+    <slot name="head" />
   </head>
-  <body class={`d-flex flex-column min-vh-100 ${fill ? 'route-page' : ''}`}>
+  <body class={`d-flex flex-column min-vh-100 ${fill ? 'route-page' : ''} ${bodyClass || ''}`}>
     <slot name="navbar" />
     {!hideHero && (
       <div class="bg-dark text-white mt-2 mb-2 d-flex flex-column justify-content-center position-relative" style={`background-image: url('${b}plane.jpg'); background-size: cover; background-position: center; min-height: 300px;`}>

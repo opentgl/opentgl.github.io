@@ -1,0 +1,649 @@
+---
+import Layout from '../layouts/Layout.astro';
+import Navbar from '../components/Navbar.astro';
+import Footer from '../components/Footer.astro';
+import { MAP_FILTER_ALIASES } from '../lib/categories.js';
+
+const base = import.meta.env.BASE_URL;
+const mapConfig = { base, aliases: MAP_FILTER_ALIASES };
+---
+
+<Layout
+  title="Карта объектов"
+  description="Интерактивная карта объектов Тольятти: культура, спорт, здравоохранение, социальные учреждения и другие открытые данные."
+  hideHero
+  fill
+  bodyClass="map-page"
+  breadcrumbs={[
+    { name: 'Открытый Тольятти', url: 'https://opentgl.github.io/' },
+    { name: 'Карта объектов', url: 'https://opentgl.github.io/map/' },
+  ]}
+>
+  <Fragment slot="head">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css" />
+  </Fragment>
+
+  <Fragment slot="navbar"><Navbar /></Fragment>
+  <Fragment slot="footer"><Footer /></Fragment>
+
+  <style is:global>
+    .map-page .app-body {
+      min-height: 0;
+    }
+    .map-page .app-body main {
+      flex: 1 1 auto;
+      min-height: 0;
+      display: flex;
+      flex-direction: column;
+    }
+    .map-page .app-body main > .container {
+      flex: 1 1 auto;
+      min-height: 0;
+      width: 100%;
+      max-width: none;
+      padding: 0 !important;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    .map-page footer {
+      flex-shrink: 0;
+    }
+
+    .map-layout {
+      position: relative;
+      flex: 1 1 auto;
+      min-height: 0;
+      display: flex;
+    }
+
+    .map-sidebar {
+      flex: 0 0 330px;
+      width: 330px;
+      overflow-y: auto;
+      padding: 1rem;
+      background: var(--bs-body-bg);
+      border-right: 1px solid var(--bs-border-color);
+      z-index: 1000;
+    }
+    .map-sidebar-head {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 0.5rem;
+      margin-bottom: 0.75rem;
+    }
+    .map-main {
+      position: relative;
+      flex: 1 1 auto;
+      min-width: 0;
+      min-height: 0;
+    }
+    .map-canvas {
+      position: absolute;
+      inset: 0;
+      background: #e9ecef;
+      z-index: 1;
+    }
+
+    .map-filter-group {
+      padding: 0.45rem 0;
+      border-bottom: 1px solid var(--bs-border-color-translucent);
+    }
+    .map-filter-group:last-child {
+      border-bottom: 0;
+    }
+    .map-filter-parent {
+      margin-bottom: 0.2rem;
+    }
+    .map-filter-children {
+      margin-left: 1.6rem;
+    }
+    .map-filter-children .form-check {
+      margin-bottom: 0.1rem;
+    }
+    .map-color-dot {
+      display: inline-block;
+      width: 0.65rem;
+      height: 0.65rem;
+      border-radius: 50%;
+      margin-right: 0.2rem;
+      vertical-align: baseline;
+    }
+
+    .map-status {
+      position: absolute;
+      z-index: 900;
+      top: 1rem;
+      left: 50%;
+      transform: translateX(-50%);
+      padding: 0.45rem 0.9rem;
+      border-radius: 999px;
+      background: rgba(33, 37, 41, 0.85);
+      color: #fff;
+      font-size: 0.85rem;
+      white-space: nowrap;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+    }
+    .map-status.is-error {
+      background: var(--bs-danger);
+    }
+
+    .map-empty {
+      position: absolute;
+      z-index: 900;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      max-width: 320px;
+      padding: 1rem 1.25rem;
+      border-radius: 0.75rem;
+      background: rgba(255, 255, 255, 0.96);
+      box-shadow: 0 4px 24px rgba(0, 0, 0, 0.18);
+      text-align: center;
+    }
+
+    .map-sidebar-toggle {
+      position: absolute;
+      z-index: 1100;
+      top: 0.75rem;
+      left: 0.75rem;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.25);
+    }
+
+    .geo-marker-wrap {
+      background: transparent;
+      border: 0;
+    }
+    .geo-marker {
+      display: block;
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      background: var(--pin, #0d6efd);
+      border: 2px solid #fff;
+      box-shadow: 0 1px 5px rgba(0, 0, 0, 0.45);
+    }
+
+    .geo-popup {
+      min-width: 220px;
+    }
+    .geo-popup-title {
+      font-weight: 600;
+      line-height: 1.25;
+      margin-bottom: 0.25rem;
+    }
+    .geo-popup-address {
+      font-size: 0.85rem;
+      color: var(--bs-secondary-color);
+      margin-bottom: 0.5rem;
+    }
+    .geo-popup-contacts {
+      display: grid;
+      gap: 0.2rem;
+      padding-top: 0.4rem;
+      border-top: 1px solid var(--bs-border-color-translucent);
+      font-size: 0.85rem;
+    }
+    .geo-popup-contact {
+      display: flex;
+      gap: 0.3rem;
+      align-items: baseline;
+    }
+    .geo-popup-label {
+      flex: 0 0 auto;
+      color: var(--bs-secondary-color);
+    }
+    .geo-popup-contact a {
+      word-break: break-word;
+    }
+
+    @media (max-width: 991.98px) {
+      body.map-page.route-page {
+        height: 100vh;
+        height: 100dvh;
+        overflow: hidden;
+      }
+      .map-page .app-body main > .container {
+        display: flex;
+        overflow: hidden;
+      }
+      .map-page footer {
+        padding-top: 0.5rem !important;
+        padding-bottom: 0.5rem !important;
+      }
+      .map-page footer .row,
+      .map-page footer hr {
+        display: none;
+      }
+      .map-page footer p {
+        margin-bottom: 0 !important;
+      }
+      .map-sidebar {
+        position: absolute;
+        inset: 0 auto 0 0;
+        width: min(88vw, 340px);
+        transform: translateX(-100%);
+        transition: transform 0.2s ease;
+        box-shadow: 2px 0 16px rgba(0, 0, 0, 0.2);
+      }
+      body.sidebar-open .map-sidebar {
+        transform: none;
+      }
+    }
+  </style>
+
+  <div class="map-layout">
+    <aside id="map-sidebar" class="map-sidebar" aria-label="Фильтры карты">
+      <div class="map-sidebar-head">
+        <h1 class="fs-5 fw-bold mb-0">Карта объектов</h1>
+        <button id="map-sidebar-close" type="button" class="btn-close d-lg-none" aria-label="Закрыть фильтры"></button>
+      </div>
+
+      <div class="d-flex gap-2 mb-2">
+        <button id="map-select-all" type="button" class="btn btn-sm btn-outline-secondary flex-fill">Все</button>
+        <button id="map-select-none" type="button" class="btn btn-sm btn-danger flex-fill">Сбросить</button>
+      </div>
+
+      <div id="map-filters" class="map-filters"></div>
+    </aside>
+
+    <button id="map-sidebar-toggle" type="button" class="btn btn-dark map-sidebar-toggle d-lg-none" aria-label="Открыть фильтры">
+      <i data-lucide="sliders-horizontal" width="18" height="18" class="me-1"></i>
+      Фильтры
+    </button>
+
+    <div class="map-main">
+      <div id="map" class="map-canvas" role="application" aria-label="Интерактивная карта объектов Тольятти"></div>
+      <div id="map-status" class="map-status" aria-live="polite">Загрузка данных…</div>
+      <div id="map-empty" class="map-empty d-none">
+        <div class="fw-semibold mb-1">Нет выбранных категорий</div>
+        <div class="small text-muted">Отметьте хотя бы один фильтр в панели слева.</div>
+      </div>
+    </div>
+  </div>
+
+  <script type="application/json" id="map-config" set:html={JSON.stringify(mapConfig)}></script>
+  <script is:inline src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script is:inline src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
+
+  <script is:inline>
+    (function () {
+      'use strict';
+
+      var configEl = document.getElementById('map-config');
+      var config = configEl ? JSON.parse(configEl.textContent) : { base: '/', aliases: {} };
+      var base = config.base || '/';
+      var aliases = config.aliases || {};
+
+      var DEFAULT_EXCLUDED = { realty: true, infrastructure: true, transport: true };
+      var CATEGORY_ORDER = [
+        'culture', 'sport', 'healthcare', 'social',
+        'landmarks', 'directory', 'realty', 'infrastructure', 'transport',
+      ];
+
+      var mapEl = document.getElementById('map');
+      var statusEl = document.getElementById('map-status');
+      var emptyEl = document.getElementById('map-empty');
+      var filtersEl = document.getElementById('map-filters');
+
+      if (!window.L) {
+        statusEl.textContent = 'Не удалось загрузить Leaflet';
+        statusEl.classList.add('is-error');
+        return;
+      }
+
+      var map = L.map(mapEl, { zoomControl: true }).setView([53.5076, 49.4194], 12);
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 19,
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a>',
+      }).addTo(map);
+      L.control.scale({ imperial: false }).addTo(map);
+
+      var filterLayers = new Map();
+      var filterById = new Map();
+      var groups = [];
+      var groupByKey = new Map();
+      var active = new Set();
+      var geo = null;
+
+      function esc(value) {
+        return String(value == null ? '' : value).replace(/[&<>"']/g, function (ch) {
+          return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch];
+        });
+      }
+
+      function orderIndex(key) {
+        var i = CATEGORY_ORDER.indexOf(key);
+        return i < 0 ? 999 : i;
+      }
+
+      function markerIcon(color) {
+        return L.divIcon({
+          className: 'geo-marker-wrap',
+          html: '<span class="geo-marker" style="--pin:' + esc(color) + '"></span>',
+          iconSize: [18, 18],
+          iconAnchor: [9, 9],
+          popupAnchor: [0, -9],
+        });
+      }
+
+      function filterColor(filterId) {
+        var filter = filterById.get(filterId);
+        var group = filter ? groupByKey.get(filter.category) : null;
+        return group ? group.color : '#6c757d';
+      }
+
+      function splitContacts(value) {
+        return String(value == null ? '' : value)
+          .split(/[,;\n]+/)
+          .map(function (part) { return part.trim(); })
+          .filter(Boolean);
+      }
+
+      function renderContacts(value, type) {
+        return splitContacts(value).map(function (part) {
+          if (type === 'email') {
+            return '<a href="mailto:' + esc(part) + '">' + esc(part) + '</a>';
+          }
+          if (type === 'phone') {
+            return '<a href="tel:' + esc(part.replace(/[^\d+]/g, '')) + '">' + esc(part) + '</a>';
+          }
+          var href = /^https?:\/\//i.test(part) ? part : 'https://' + part;
+          return '<a href="' + esc(href) + '" target="_blank" rel="noopener">' + esc(part) + '</a>';
+        }).join(', ');
+      }
+
+      function popupHtml(p) {
+        var contacts = '';
+        if (p.email) {
+          contacts += '<div class="geo-popup-contact"><span class="geo-popup-label">Email:</span><span>' + renderContacts(p.email, 'email') + '</span></div>';
+        }
+        if (p.phone) {
+          contacts += '<div class="geo-popup-contact"><span class="geo-popup-label">Телефон:</span><span>' + renderContacts(p.phone, 'phone') + '</span></div>';
+        }
+        if (p.site) {
+          contacts += '<div class="geo-popup-contact"><span class="geo-popup-label">Сайт:</span><span>' + renderContacts(p.site, 'site') + '</span></div>';
+        }
+
+        return (
+          '<div class="geo-popup">' +
+            '<div class="geo-popup-title">' + esc(p.name) + '</div>' +
+            '<div class="geo-popup-address">' + esc(p.address) + '</div>' +
+            (contacts ? '<div class="geo-popup-contacts">' + contacts + '</div>' : '') +
+          '</div>'
+        );
+      }
+
+      function createLayer() {
+        if (L.markerClusterGroup) {
+          return L.markerClusterGroup({
+            maxClusterRadius: 55,
+            showCoverageOnHover: false,
+            spiderfyOnMaxZoom: true,
+            disableClusteringAtZoom: 17,
+          });
+        }
+        return L.layerGroup();
+      }
+
+      function buildLayers(features) {
+        for (var i = 0; i < features.length; i++) {
+          var feature = features[i];
+          var p = feature.properties || {};
+          var coords = feature.geometry && feature.geometry.coordinates;
+          if (!coords || coords.length < 2) continue;
+
+          if (!filterLayers.has(p.filterId)) filterLayers.set(p.filterId, createLayer());
+          var marker = L.marker([coords[1], coords[0]], { icon: markerIcon(filterColor(p.filterId)) });
+          marker.bindPopup(popupHtml(p), { maxWidth: 320 });
+          filterLayers.get(p.filterId).addLayer(marker);
+        }
+      }
+
+      function buildGroups(meta) {
+        var categories = (meta.categories || []).slice();
+        var filters = meta.filters || [];
+        if (!categories.length) {
+          // Резервный вариант, если endpoint вернул только features.
+          var byCategory = new Map();
+          filters.forEach(function (f) {
+            if (!byCategory.has(f.category)) {
+              byCategory.set(f.category, { key: f.category, label: f.category, color: '#6c757d', count: 0 });
+            }
+            byCategory.get(f.category).count += f.count;
+          });
+          categories = Array.from(byCategory.values());
+        }
+        categories.sort(function (a, b) { return orderIndex(a.key) - orderIndex(b.key); });
+        groups = categories
+          .map(function (cat) {
+            return Object.assign({}, cat, {
+              filters: filters.filter(function (f) { return f.category === cat.key; }),
+            });
+          })
+          .filter(function (g) { return g.filters.length; });
+        groupByKey = new Map(groups.map(function (g) { return [g.key, g]; }));
+        filterById = new Map(filters.map(function (f) { return [f.id, f]; }));
+      }
+
+      function renderFilters() {
+        filtersEl.innerHTML = groups.map(function (g) {
+          var childHtml = g.filters.map(function (f) {
+            return (
+              '<div class="form-check">' +
+                '<input class="form-check-input map-filter-child" type="checkbox" value="' + esc(f.id) + '" id="filter-' + esc(f.id) + '">' +
+                '<label class="form-check-label small" for="filter-' + esc(f.id) + '">' +
+                  esc(f.label) + ' <span class="text-muted">' + f.count + '</span>' +
+                '</label>' +
+              '</div>'
+            );
+          }).join('');
+
+          return (
+            '<div class="map-filter-group" data-category="' + esc(g.key) + '">' +
+              '<div class="form-check map-filter-parent">' +
+                '<input class="form-check-input map-filter-parent-box" type="checkbox" data-category="' + esc(g.key) + '" id="cat-' + esc(g.key) + '">' +
+                '<label class="form-check-label fw-semibold" for="cat-' + esc(g.key) + '">' +
+                  '<span class="map-color-dot" style="background:' + esc(g.color) + '"></span>' +
+                  esc(g.label) + ' <span class="text-muted small fw-normal">' + g.count + '</span>' +
+                '</label>' +
+              '</div>' +
+              '<div class="map-filter-children">' + childHtml + '</div>' +
+            '</div>'
+          );
+        }).join('');
+      }
+
+      function normalizeToken(token) {
+        var value = String(token || '').trim().toLowerCase();
+        if (!value) return null;
+        var variants = [value, value.replace(/_/g, '-'), value.replace(/-/g, '_')];
+        for (var i = 0; i < variants.length; i++) {
+          if (groupByKey.has(variants[i])) return { type: 'group', value: variants[i] };
+          if (filterById.has(variants[i])) return { type: 'filter', value: variants[i] };
+          if (aliases[variants[i]]) return normalizeToken(aliases[variants[i]]);
+        }
+        return null;
+      }
+
+      function addTokens(tokens) {
+        tokens.forEach(function (token) {
+          var resolved = normalizeToken(token);
+          if (!resolved) return;
+          if (resolved.type === 'group') {
+            groupByKey.get(resolved.value).filters.forEach(function (f) { active.add(f.id); });
+          } else {
+            active.add(resolved.value);
+          }
+        });
+      }
+
+      function addDefaults() {
+        groups.forEach(function (g) {
+          if (DEFAULT_EXCLUDED[g.key]) return;
+          g.filters.forEach(function (f) { active.add(f.id); });
+        });
+        if (!active.size) {
+          groups.forEach(function (g) {
+            g.filters.forEach(function (f) { active.add(f.id); });
+          });
+        }
+      }
+
+      function initState() {
+        var params = new URLSearchParams(window.location.search);
+        var raw = params.get('category');
+        if (raw != null && raw.trim() !== '') {
+          var tokens = raw.split(',').map(function (t) { return t.trim(); }).filter(Boolean);
+          addTokens(tokens);
+        } else {
+          addDefaults();
+        }
+      }
+
+      function syncLayers() {
+        filterLayers.forEach(function (layer, id) {
+          if (active.has(id)) {
+            if (!map.hasLayer(layer)) map.addLayer(layer);
+          } else if (map.hasLayer(layer)) {
+            map.removeLayer(layer);
+          }
+        });
+      }
+
+      function refreshCheckboxes() {
+        groups.forEach(function (g) {
+          var activeCount = 0;
+          g.filters.forEach(function (f) {
+            var box = document.getElementById('filter-' + f.id);
+            var on = active.has(f.id);
+            if (box) box.checked = on;
+            if (on) activeCount++;
+          });
+          var parent = document.getElementById('cat-' + g.key);
+          if (parent) {
+            parent.checked = activeCount === g.filters.length;
+            parent.indeterminate = activeCount > 0 && activeCount < g.filters.length;
+          }
+        });
+      }
+
+      function updateSummary() {
+        if (!geo) return;
+        emptyEl.classList.toggle('d-none', active.size > 0);
+      }
+
+      function syncUrl() {
+        var tokens = [];
+        groups.forEach(function (g) {
+          var selected = g.filters.filter(function (f) { return active.has(f.id); });
+          if (!selected.length) return;
+          if (selected.length === g.filters.length) tokens.push(g.key);
+          else selected.forEach(function (f) { tokens.push(f.id); });
+        });
+        var params = new URLSearchParams(window.location.search);
+        if (tokens.length) params.set('category', tokens.join(','));
+        else params.set('category', 'none');
+        var qs = params.toString();
+        window.history.replaceState(null, '', window.location.pathname + (qs ? '?' + qs : ''));
+      }
+
+      function applyState() {
+        syncLayers();
+        refreshCheckboxes();
+        updateSummary();
+        syncUrl();
+      }
+
+      function setAll(on) {
+        if (on) {
+          groups.forEach(function (g) { g.filters.forEach(function (f) { active.add(f.id); }); });
+        } else {
+          active.clear();
+        }
+        applyState();
+        if (on) fitActive();
+      }
+
+      function fitActive() {
+        var bounds = L.latLngBounds([]);
+        if (geo) {
+          geo.features.forEach(function (feature) {
+            if (!active.has(feature.properties.filterId)) return;
+            var c = feature.geometry && feature.geometry.coordinates;
+            if (c && c.length >= 2) bounds.extend([c[1], c[0]]);
+          });
+        }
+        if (bounds.isValid()) map.fitBounds(bounds, { padding: [30, 30], maxZoom: 15 });
+        else map.setView([53.5076, 49.4194], 12);
+      }
+
+      function bindUi() {
+        filtersEl.addEventListener('change', function (event) {
+          var target = event.target;
+          if (!target) return;
+
+          if (target.classList.contains('map-filter-child')) {
+            if (target.checked) active.add(target.value);
+            else active.delete(target.value);
+          } else if (target.classList.contains('map-filter-parent-box')) {
+            var group = groupByKey.get(target.dataset.category);
+            if (!group) return;
+            group.filters.forEach(function (f) {
+              if (target.checked) active.add(f.id);
+              else active.delete(f.id);
+            });
+          }
+          applyState();
+        });
+
+        document.getElementById('map-select-all').addEventListener('click', function () { setAll(true); });
+        document.getElementById('map-select-none').addEventListener('click', function () { setAll(false); });
+
+        var toggle = document.getElementById('map-sidebar-toggle');
+        if (toggle) {
+          toggle.addEventListener('click', function () {
+            document.body.classList.toggle('sidebar-open');
+            setTimeout(function () { map.invalidateSize(); }, 220);
+          });
+        }
+        var close = document.getElementById('map-sidebar-close');
+        if (close) {
+          close.addEventListener('click', function () {
+            document.body.classList.remove('sidebar-open');
+            setTimeout(function () { map.invalidateSize(); }, 220);
+          });
+        }
+
+        window.addEventListener('load', function () { map.invalidateSize(); });
+      }
+
+      async function init() {
+        try {
+          var res = await fetch(base + 'data/geo.json', { cache: 'no-cache' });
+          if (!res.ok) throw new Error('HTTP ' + res.status);
+          geo = await res.json();
+          if (!geo || geo.type !== 'FeatureCollection') throw new Error('Некорректный формат GeoJSON');
+
+          buildGroups(geo.meta || {});
+          buildLayers(geo.features || []);
+          renderFilters();
+          initState();
+          bindUi();
+          applyState();
+          statusEl.classList.add('d-none');
+          setTimeout(function () { map.invalidateSize(); fitActive(); }, 0);
+        } catch (err) {
+          statusEl.textContent = 'Не удалось загрузить данные карты: ' + err.message;
+          statusEl.classList.add('is-error');
+          console.error(err);
+        }
+      }
+
+      init();
+    })();
+  </script>
+</Layout>

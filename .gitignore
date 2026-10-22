@@ -14,6 +14,7 @@ stops.csv
 public/data/
 dist/
 .astro/
+.cache/
 
 # OS
 .DS_Store
