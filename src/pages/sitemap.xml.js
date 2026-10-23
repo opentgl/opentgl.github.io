@@ -1,4 +1,5 @@
 import { loadAllMeta, getCategories } from '../lib/csv-data';
+import feedsData from '../data/culture-feeds.json';
 
 export async function GET() {
   const meta = await loadAllMeta();
@@ -10,9 +11,15 @@ export async function GET() {
     { loc: '/about/', priority: '0.8', changefreq: 'monthly' },
     { loc: '/map/', priority: '0.8', changefreq: 'weekly' },
     { loc: '/route/', priority: '0.8', changefreq: 'monthly' },
+    { loc: '/news/', priority: '0.7', changefreq: 'daily' },
     ...categories.map(c => ({
       loc: `/category/${c.key}/`,
       priority: '0.6',
+      changefreq: 'weekly'
+    })),
+    ...(feedsData.feeds || []).map(feed => ({
+      loc: `/events/${feed.id}/`,
+      priority: '0.5',
       changefreq: 'weekly'
     }))
   ];

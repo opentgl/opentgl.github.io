@@ -7,6 +7,22 @@ import DataTable from '../../components/DataTable.astro';
 import { loadAllMeta, loadDataByFile, getCategories } from '../../lib/csv-data.js';
 import { CATEGORIES, fileSlug } from '../../lib/categories.js';
 import { enrichEducationObjects, getMapCounts, loadOrganizationIndex } from '../../lib/geo.js';
+import cultureFeeds from '../../data/culture-feeds.json';
+
+const feedsByHost = new Map(
+  (cultureFeeds.feeds || []).map(feed => [String(feed.host || '').toLowerCase(), feed]),
+);
+
+function siteHost(value) {
+  const raw = String(value || '').trim();
+  if (!raw) return '';
+  try {
+    const url = new URL(/^https?:\/\//i.test(raw) ? raw : `https://${raw}`);
+    return url.hostname.replace(/^www\./i, '').toLowerCase();
+  } catch {
+    return '';
+  }
+}
 
 export async function getStaticPaths() {
   const meta = await loadAllMeta();
@@ -56,10 +72,16 @@ const fileData = await Promise.all(files.map(async file => {
   }
 
   const filterId = fileSlug(file.filename);
+  const eventIds =
+    category === 'culture'
+      ? data.objects.map(obj => feedsByHost.get(siteHost(obj['Сайт']))?.id || '')
+      : null;
+
   return {
     subcategory: file.subcategory,
     filterId,
     mapCount: mapCounts[filterId] || 0,
+    eventIds: eventIds?.some(Boolean) ? eventIds : null,
     data: { ...data, headers },
   };
 }));
@@ -93,7 +115,7 @@ const totalMapCount = fileData.reduce((sum, file) => sum + file.mapCount, 0);
     )}
   </div>
 
-  {fileData.map(({ subcategory, data, filterId, mapCount }) => (
+  {fileData.map(({ subcategory, data, filterId, mapCount, eventIds }) => (
     <div class="card border-0 shadow-sm mb-3">
       <div class="card-header bg-light d-flex justify-content-between align-items-center py-2 gap-2 flex-wrap">
         <h2 class="fs-6 fw-semibold mb-0">{subcategory}</h2>
@@ -112,7 +134,7 @@ const totalMapCount = fileData.reduce((sum, file) => sum + file.mapCount, 0);
           <span class="badge bg-secondary">{data.objects.length} записей</span>
         </div>
       </div>
-      <DataTable headers={data.headers} objects={data.objects} />
+      <DataTable headers={data.headers} objects={data.objects} eventIds={eventIds} />
     </div>
   ))}
 </Layout>

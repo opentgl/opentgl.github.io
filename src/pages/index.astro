@@ -4,10 +4,37 @@ import Navbar from '../components/Navbar.astro';
 import Footer from '../components/Footer.astro';
 import NavStrip from '../components/NavStrip.astro';
 import { loadAllMeta, getCategories } from '../lib/csv-data.js';
+import feedsData from '../data/culture-feeds.json';
+import eventsData from '../data/culture-events.json';
+import { buildNewsItems, getFeedSources } from '../lib/culture-news.js';
 
 const base = import.meta.env.BASE_URL;
 const meta = await loadAllMeta();
 const categories = getCategories(meta);
+
+const sources = getFeedSources(feedsData);
+const allNews = buildNewsItems(feedsData, eventsData, base);
+const perSource = new Map();
+const latestEvents = allNews
+  .filter(item => {
+    const count = perSource.get(item.feedId) || 0;
+    if (count >= 2) return false;
+    perSource.set(item.feedId, count + 1);
+    return true;
+  })
+  .slice(0, 8);
+
+const dateFormatter = new Intl.DateTimeFormat('ru-RU', {
+  day: 'numeric',
+  month: 'long',
+  year: 'numeric',
+});
+
+function formatDate(value) {
+  if (!value) return 'Дата не указана';
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? 'Дата не указана' : dateFormatter.format(date);
+}
 ---
 
 <Layout title="Портал открытых данных города Тольятти">
@@ -17,30 +44,85 @@ const categories = getCategories(meta);
   </Fragment>
   <Fragment slot="footer"><Footer /></Fragment>
 
-  <div class="d-flex gap-2 flex-wrap mb-4">
-    <span class="badge bg-primary bg-opacity-75 fs-6">{meta.length} файлов</span>
-    <span class="badge bg-success bg-opacity-75 fs-6">{categories.length} категорий</span>
-    <span class="badge bg-info bg-opacity-75 fs-6">{categories.reduce((s, c) => s + c.rowCount, 0)} записей</span>
-  </div>
-
-  <div class="row g-3">
-    {categories.map(cat => (
-      <div class="col-sm-6 col-lg-4 col-xl-3">
-        <div class="card h-100 border-0 shadow-sm" style="cursor:pointer;" onclick={`window.location='${base}category/${cat.key}'`}>
-          <div class="card-body">
-            <div class="d-flex align-items-center mb-2">
-              <span class="badge me-2" style={`background: ${cat.color};`}>
-                <i data-lucide={cat.icon} width="14" height="14"></i>
-              </span>
-              <h2 class="card-title mb-0 fw-semibold fs-6">{cat.label}</h2>
-            </div>
-            <p class="card-text small text-muted mb-1">
-              {cat.subcategories.map(s => s.name).join(', ')}
-            </p>
-            <small class="text-muted">{cat.fileCount} файл(ов), {cat.rowCount} записей</small>
-          </div>
-        </div>
+  <section class="py-3 py-lg-4">
+    <div class="row justify-content-center">
+      <div class="col-lg-10 col-xl-8">
+        <h1 class="h2 fw-bold mb-3">Открытые данные Тольятти — в одном месте</h1>
+        <p class="lead text-body-secondary mb-0">
+          «Открытый Тольятти» собирает сведения из
+          <a class="home-source-link" href="https://tgl.ru/opendata" target="_blank" rel="noopener">открытых источников города</a>:
+          учреждения культуры, спорта, образования и здравоохранения, социальную
+          поддержку, объекты недвижимости и инфраструктуры.
+        </p>
       </div>
-    ))}
-  </div>
+    </div>
+  </section>
+
+  <section class="py-4 mt-3 border-top" id="events-feed">
+    <div class="d-flex flex-wrap justify-content-between align-items-end gap-2 mb-3">
+      <div>
+        <h2 class="h4 fw-bold mb-1">Общая лента RSS</h2>
+        <p class="text-muted mb-0">Последние записи с описанием из лент учреждений культуры Тольятти.</p>
+      </div>
+      <a href={`${base}news/`} class="btn btn-sm btn-outline-secondary">
+        Лента всех новостей
+      </a>
+    </div>
+
+    {latestEvents.length ? (
+      <div class="row g-3">
+        {latestEvents.map(item => (
+          <div class="col-md-6">
+            <article class="card h-100 border-0 shadow-sm">
+              <div class="card-body d-flex flex-column">
+                <div class="d-flex justify-content-between align-items-center gap-2 mb-2">
+                  <a href={item.sourcePage} class="badge text-bg-light text-decoration-none">
+                    {item.sourceName}
+                  </a>
+                  <time class="small text-muted" datetime={item.publishedAt || undefined}>
+                    {formatDate(item.publishedAt)}
+                  </time>
+                </div>
+                <h3 class="h6 mb-2">
+                  <a class="text-decoration-none" href={item.url} target="_blank" rel="noopener">
+                    {item.title}
+                  </a>
+                </h3>
+                {item.summary && <p class="small text-body-secondary mb-3">{item.summary}</p>}
+                <div class="mt-auto d-flex flex-wrap gap-3 small">
+                  <a href={item.url} target="_blank" rel="noopener">Читать на сайте</a>
+                  <a href={item.sourcePage}>Лента учреждения</a>
+                </div>
+              </div>
+            </article>
+          </div>
+        ))}
+      </div>
+    ) : (
+      <div class="alert alert-light border mb-0">
+        В лентах учреждений культуры пока нет записей с описанием.
+      </div>
+    )}
+
+    <div class="mt-3 small text-muted">
+      <span class="fw-semibold">Источники:</span>
+      {sources.map((source, index) => (
+        <>
+          {index > 0 && <span class="mx-1">·</span>}
+          <a href={source.feed} target="_blank" rel="noopener" title={source.name}>
+            {source.shortName}
+          </a>
+        </>
+      ))}
+    </div>
+  </section>
 </Layout>
+
+<style>
+  .home-source-link {
+    text-decoration: none;
+  }
+  .home-source-link:hover {
+    text-decoration: underline;
+  }
+</style>

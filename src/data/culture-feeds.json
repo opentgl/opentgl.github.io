@@ -1,0 +1,77 @@
+{
+  "generatedAt": "2026-10-23T05:52:39.969Z",
+  "feeds": [
+    {
+      "id": "burevestnik-tgl-ru",
+      "name": "Муниципальное автономное учреждение  городского округа Тольятти «Культурно – досуговый центр «Буревестник»",
+      "address": "Самарская область, 445011, г. Тольятти,  ул. К. Маркса, 27",
+      "subcategory": "Досуг",
+      "filterId": "dosug",
+      "site": "http://burevestnik-tgl.ru",
+      "host": "burevestnik-tgl.ru",
+      "feed": "https://burevestnik-tgl.ru/feed/rss/",
+      "type": "rss",
+      "discoveredAt": "2026-10-23T05:52:34.471Z"
+    },
+    {
+      "id": "teatrdiligence-ru",
+      "name": "Муниципальное автономное учреждение искусства городского округа Тольятти  «Театр юного зрителя «Дилижанс»",
+      "address": "Самарская область, 445051, г. Тольятти, пр. Степана Разина, 93",
+      "subcategory": "Театры",
+      "filterId": "teatri",
+      "site": "https://teatrdiligence.ru",
+      "host": "teatrdiligence.ru",
+      "feed": "https://teatrdiligence.ru/news/rss",
+      "type": "rss",
+      "discoveredAt": "2026-10-23T05:52:39.957Z"
+    },
+    {
+      "id": "pkitis-tltsu-ru",
+      "name": "Муниципальное автономное учреждение культуры городского округа Тольятти «Парковый комплекс истории техники имени К.Г. Сахарова»",
+      "address": "445000, Самарская область,   г. Тольятти,\n ул. Южное шоссе, 137",
+      "subcategory": "Музеи",
+      "filterId": "muzei",
+      "site": "http://pkitis.tltsu.ru",
+      "host": "pkitis.tltsu.ru",
+      "feed": "https://pkitis.tltsu.ru/?feed=rss2",
+      "type": "rss",
+      "discoveredAt": "2026-10-23T05:52:36.979Z"
+    },
+    {
+      "id": "tltmuseum-ru",
+      "name": "Муниципальное бюджетное учреждение  культуры  городского округа Тольятти «Тольяттинский краеведческий музей»",
+      "address": "445021, Самарская область,   г. Тольятти, б-р  Ленина, 22",
+      "subcategory": "Музеи",
+      "filterId": "muzei",
+      "site": "https://www.tltmuseum.ru",
+      "host": "tltmuseum.ru",
+      "feed": "https://www.tltmuseum.ru/ru/?format=feed&type=rss",
+      "type": "rss",
+      "discoveredAt": "2026-10-23T05:52:35.611Z"
+    },
+    {
+      "id": "mdt-tlt-ru",
+      "name": "Муниципальное бюджетное учреждение искусства городского округа Тольятти «Молодежный драматический театр»",
+      "address": "Самарская область, г. Тольятти, ул. Л. Чайкиной, 65\n445008",
+      "subcategory": "Театры",
+      "filterId": "teatri",
+      "site": "https://mdt-tlt.ru",
+      "host": "mdt-tlt.ru",
+      "feed": "https://mdt-tlt.ru/index.php?format=feed&type=rss",
+      "type": "rss",
+      "discoveredAt": "2026-10-23T05:52:39.555Z"
+    },
+    {
+      "id": "thm-museum-ru",
+      "name": "Муниципальное бюджетное учреждение культуры городского округа Тольятти «Тольяттинский художественный музей»",
+      "address": "445021, Самарская область,   г. Тольятти,              б-р  Ленина, 22",
+      "subcategory": "Музеи",
+      "filterId": "muzei",
+      "site": "https://www.thm-museum.ru",
+      "host": "thm-museum.ru",
+      "feed": "https://www.thm-museum.ru/index.php?format=feed&type=rss",
+      "type": "rss",
+      "discoveredAt": "2026-10-23T05:52:35.052Z"
+    }
+  ]
+}

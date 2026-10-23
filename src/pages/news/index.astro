@@ -1,0 +1,158 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import Navbar from '../../components/Navbar.astro';
+import Footer from '../../components/Footer.astro';
+import feedsData from '../../data/culture-feeds.json';
+import eventsData from '../../data/culture-events.json';
+import { buildNewsItems } from '../../lib/culture-news.js';
+
+const base = import.meta.env.BASE_URL;
+const items = buildNewsItems(feedsData, eventsData, base);
+const pageSize = 10;
+
+const dateFormatter = new Intl.DateTimeFormat('ru-RU', {
+  day: 'numeric',
+  month: 'long',
+  year: 'numeric',
+});
+
+function formatDate(value) {
+  if (!value) return 'Дата не указана';
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? 'Дата не указана' : dateFormatter.format(date);
+}
+---
+
+<Layout
+  title="Лента всех новостей"
+  description="Все записи с описанием из RSS-лент учреждений культуры Тольятти."
+  hideHero
+  breadcrumbs={[
+    { name: 'Открытый Тольятти', url: 'https://opentgl.github.io/' },
+    { name: 'Лента всех новостей', url: 'https://opentgl.github.io/news/' },
+  ]}
+>
+  <Fragment slot="navbar"><Navbar /></Fragment>
+  <Fragment slot="footer"><Footer /></Fragment>
+
+  <div class="d-flex align-items-center gap-2 mb-3 flex-wrap">
+    <a href={base} class="btn btn-outline-secondary btn-sm d-inline-flex align-items-center">
+      <i style="width:18px;height:18px;" class="me-1" data-lucide="chevron-left"></i>
+      На главную
+    </a>
+    <span class="badge text-bg-light">RSS</span>
+  </div>
+
+  <div class="row justify-content-center">
+    <div class="col-lg-10 col-xl-8">
+      <p class="text-uppercase text-muted small fw-semibold mb-1">Общая лента</p>
+      <h1 class="h3 fw-bold mb-2">Лента всех новостей</h1>
+      <p class="text-muted mb-4">Все записи с описанием из RSS-лент учреждений Тольятти.</p>
+
+      {items.length ? (
+        <>
+          <div class="d-flex flex-column gap-3" data-news-list>
+            {items.map((item, index) => (
+              <article class="card border-0 shadow-sm" data-news-item hidden={index >= pageSize}>
+                <div class="card-body">
+                  <div class="d-flex justify-content-between align-items-center gap-2 mb-2">
+                    <a href={item.sourcePage} class="badge text-bg-light text-decoration-none">
+                      {item.sourceName}
+                    </a>
+                    <time class="small text-muted" datetime={item.publishedAt || undefined}>
+                      {formatDate(item.publishedAt)}
+                    </time>
+                  </div>
+                  <h2 class="h5 mb-2">
+                    <a class="text-decoration-none" href={item.url} target="_blank" rel="noopener">
+                      {item.title}
+                    </a>
+                  </h2>
+                  <p class="mb-3 text-body-secondary">{item.summary}</p>
+                  <div class="d-flex flex-wrap gap-3 small">
+                    <a href={item.url} target="_blank" rel="noopener">Читать на сайте</a>
+                    <a href={item.sourcePage}>Лента учреждения</a>
+                  </div>
+                </div>
+              </article>
+            ))}
+          </div>
+
+          <div class="py-3" data-news-sentinel aria-hidden="true"></div>
+          <div
+            class="alert alert-light border text-center mt-2 d-none"
+            data-news-end
+            role="status"
+            aria-live="polite"
+          >
+            Ой, вы долистали до самого конца
+          </div>
+        </>
+      ) : (
+        <div class="alert alert-light border" role="alert">
+          В лентах пока нет записей с описанием.
+        </div>
+      )}
+    </div>
+  </div>
+
+  <noscript>
+    <style is:inline>
+      [data-news-item][hidden] { display: block !important; }
+    </style>
+  </noscript>
+
+  <script>
+    (() => {
+      const pageSize = 10;
+      const list = document.querySelector('[data-news-list]');
+      if (!list) return;
+
+      const items = Array.from(list.querySelectorAll('[data-news-item]'));
+      const sentinel = document.querySelector('[data-news-sentinel]');
+      const end = document.querySelector('[data-news-end]');
+      if (!items.length || !sentinel || !end) return;
+
+      let shown = items.filter(item => !item.hidden).length;
+      let finished = false;
+      let observer = null;
+
+      function finish() {
+        if (finished) return;
+        finished = true;
+        end.classList.remove('d-none');
+        observer?.disconnect();
+        sentinel.remove();
+      }
+
+      function showMore() {
+        if (finished) return;
+        if (shown >= items.length) {
+          finish();
+          return;
+        }
+
+        const next = Math.min(shown + pageSize, items.length);
+        for (let i = shown; i < next; i++) items[i].hidden = false;
+        shown = next;
+        if (shown >= items.length) finish();
+      }
+
+      if (!('IntersectionObserver' in window)) {
+        items.forEach(item => { item.hidden = false; });
+        finish();
+        return;
+      }
+
+      observer = new IntersectionObserver(entries => {
+        if (entries.some(entry => entry.isIntersecting)) showMore();
+      }, { rootMargin: '200px 0px' });
+
+      if (shown >= items.length) {
+        finish();
+      } else {
+        observer.observe(sentinel);
+      }
+    })();
+  </script>
+</Layout>

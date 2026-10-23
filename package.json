@@ -6,10 +6,15 @@
   "scripts": {
     "dev": "astro dev",
     "build": "astro build",
-    "preview": "astro preview"
+    "preview": "astro preview",
+    "rss:discover": "node scripts/discover-culture-feeds.mjs",
+    "rss:update": "node scripts/fetch-culture-events.mjs"
   },
   "dependencies": {
     "astro": "^5.0.0",
     "lucide": "^1.27.0"
+  },
+  "devDependencies": {
+    "fast-xml-parser": "^5.11.2"
   }
 }

@@ -12,6 +12,7 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { loadAllMeta, loadDataByFile } from './csv-data.js';
 import { CATEGORIES, fileSlug } from './categories.js';
+import cultureFeeds from '../data/culture-feeds.json';
 import {
   addressCacheKey,
   buildOrgIndex,
@@ -20,6 +21,9 @@ import {
 } from './address-match.js';
 
 const GEO_CACHE_FILE = join(process.cwd(), 'src', 'data', 'geo-cache.json');
+const FEEDS_BY_HOST = new Map(
+  (cultureFeeds.feeds || []).map(feed => [String(feed.host || '').toLowerCase(), feed]),
+);
 
 let orgIndexPromise = null;
 let geoPromise = null;
@@ -100,6 +104,18 @@ function contactValue(value) {
   const text = String(value ?? '').trim();
   if (!text || text === '—' || text === '-' || /^нет$/i.test(text)) return '';
   return text;
+}
+
+/** Хост сайта без www — по нему находим заранее проверенную RSS-ленту. */
+function siteHost(value) {
+  const raw = String(value ?? '').trim();
+  if (!raw) return '';
+  try {
+    const url = new URL(/^https?:\/\//i.test(raw) ? raw : `https://${raw}`);
+    return url.hostname.replace(/^www\./i, '').toLowerCase();
+  } catch {
+    return '';
+  }
 }
 
 /** Индекс организаций из телефонного справочника (для адресов образования). */
@@ -218,6 +234,8 @@ export async function buildGeoJSON() {
         const email = contactValue(obj['Email']);
         const phone = contactValue(obj['Телефон']);
         const site = contactValue(obj['Сайт']);
+        const eventFeed =
+          entry.category === 'culture' ? FEEDS_BY_HOST.get(siteHost(site)) : null;
 
         features.push({
           type: 'Feature',
@@ -233,6 +251,7 @@ export async function buildGeoJSON() {
             ...(email ? { email } : {}),
             ...(phone ? { phone } : {}),
             ...(site ? { site } : {}),
+            ...(eventFeed ? { eventId: eventFeed.id } : {}),
           },
         });
 

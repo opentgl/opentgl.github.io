@@ -104,6 +104,11 @@ const mapConfig = { base, aliases: MAP_FILTER_ALIASES };
     .map-filter-children .form-check {
       margin-bottom: 0.1rem;
     }
+    .map-attribute-filters {
+      margin-top: 0.5rem;
+      padding-top: 0.65rem;
+      border-top: 1px solid var(--bs-border-color-translucent);
+    }
     .map-color-dot {
       display: inline-block;
       width: 0.65rem;
@@ -199,6 +204,9 @@ const mapConfig = { base, aliases: MAP_FILTER_ALIASES };
     .geo-popup-contact a {
       word-break: break-word;
     }
+    .geo-popup-events {
+      margin-top: 0.6rem;
+    }
 
     @media (max-width: 991.98px) {
       body.map-page.route-page {
@@ -232,6 +240,13 @@ const mapConfig = { base, aliases: MAP_FILTER_ALIASES };
       body.sidebar-open .map-sidebar {
         transform: none;
       }
+      .map-sidebar-toggle {
+        left: 50%;
+        transform: translateX(-50%);
+      }
+      .map-status {
+        top: 3.6rem;
+      }
     }
   </style>
 
@@ -248,6 +263,18 @@ const mapConfig = { base, aliases: MAP_FILTER_ALIASES };
       </div>
 
       <div id="map-filters" class="map-filters"></div>
+
+      <div class="map-attribute-filters">
+        <div class="small fw-semibold text-uppercase text-muted mb-1">Дополнительно</div>
+        <div class="form-check">
+          <input class="form-check-input" type="checkbox" id="map-filter-site">
+          <label class="form-check-label small" for="map-filter-site">С сайтом</label>
+        </div>
+        <div class="form-check">
+          <input class="form-check-input" type="checkbox" id="map-filter-events">
+          <label class="form-check-label small" for="map-filter-events">С лентой событий</label>
+        </div>
+      </div>
     </aside>
 
     <button id="map-sidebar-toggle" type="button" class="btn btn-dark map-sidebar-toggle d-lg-none" aria-label="Открыть фильтры">
@@ -259,8 +286,8 @@ const mapConfig = { base, aliases: MAP_FILTER_ALIASES };
       <div id="map" class="map-canvas" role="application" aria-label="Интерактивная карта объектов Тольятти"></div>
       <div id="map-status" class="map-status" aria-live="polite">Загрузка данных…</div>
       <div id="map-empty" class="map-empty d-none">
-        <div class="fw-semibold mb-1">Нет выбранных категорий</div>
-        <div class="small text-muted">Отметьте хотя бы один фильтр в панели слева.</div>
+        <div id="map-empty-title" class="fw-semibold mb-1">Нет выбранных категорий</div>
+        <div id="map-empty-text" class="small text-muted">Отметьте хотя бы один фильтр в панели слева.</div>
       </div>
     </div>
   </div>
@@ -307,6 +334,8 @@ const mapConfig = { base, aliases: MAP_FILTER_ALIASES };
       var groups = [];
       var groupByKey = new Map();
       var active = new Set();
+      var markerRecords = [];
+      var attributeFilters = { site: false, events: false };
       var geo = null;
 
       function esc(value) {
@@ -368,11 +397,18 @@ const mapConfig = { base, aliases: MAP_FILTER_ALIASES };
           contacts += '<div class="geo-popup-contact"><span class="geo-popup-label">Сайт:</span><span>' + renderContacts(p.site, 'site') + '</span></div>';
         }
 
+        var events = '';
+        if (p.eventId) {
+          var eventsHref = base.replace(/\/?$/, '/') + 'events/' + encodeURIComponent(p.eventId) + '/';
+          events = '<div class="geo-popup-events"><a class="btn btn-sm btn-primary" href="' + esc(eventsHref) + '">Лента событий</a></div>';
+        }
+
         return (
           '<div class="geo-popup">' +
             '<div class="geo-popup-title">' + esc(p.name) + '</div>' +
             '<div class="geo-popup-address">' + esc(p.address) + '</div>' +
             (contacts ? '<div class="geo-popup-contacts">' + contacts + '</div>' : '') +
+            events +
           '</div>'
         );
       }
@@ -390,6 +426,7 @@ const mapConfig = { base, aliases: MAP_FILTER_ALIASES };
       }
 
       function buildLayers(features) {
+        markerRecords = [];
         for (var i = 0; i < features.length; i++) {
           var feature = features[i];
           var p = feature.properties || {};
@@ -399,8 +436,28 @@ const mapConfig = { base, aliases: MAP_FILTER_ALIASES };
           if (!filterLayers.has(p.filterId)) filterLayers.set(p.filterId, createLayer());
           var marker = L.marker([coords[1], coords[0]], { icon: markerIcon(filterColor(p.filterId)) });
           marker.bindPopup(popupHtml(p), { maxWidth: 320 });
-          filterLayers.get(p.filterId).addLayer(marker);
+          markerRecords.push({
+            marker: marker,
+            filterId: p.filterId,
+            hasSite: !!p.site,
+            hasEvent: !!p.eventId,
+          });
         }
+      }
+
+      function passesAttributeFilters(record) {
+        if (attributeFilters.site && !record.hasSite) return false;
+        if (attributeFilters.events && !record.hasEvent) return false;
+        return true;
+      }
+
+      function rebuildAttributeLayers() {
+        filterLayers.forEach(function (layer) { layer.clearLayers(); });
+        markerRecords.forEach(function (record) {
+          if (!passesAttributeFilters(record)) return;
+          var layer = filterLayers.get(record.filterId);
+          if (layer) layer.addLayer(record.marker);
+        });
       }
 
       function buildGroups(meta) {
@@ -495,6 +552,9 @@ const mapConfig = { base, aliases: MAP_FILTER_ALIASES };
 
       function initState() {
         var params = new URLSearchParams(window.location.search);
+        attributeFilters.site = params.get('site') === '1';
+        attributeFilters.events = params.get('events') === '1';
+
         var raw = params.get('category');
         if (raw != null && raw.trim() !== '') {
           var tokens = raw.split(',').map(function (t) { return t.trim(); }).filter(Boolean);
@@ -529,11 +589,35 @@ const mapConfig = { base, aliases: MAP_FILTER_ALIASES };
             parent.indeterminate = activeCount > 0 && activeCount < g.filters.length;
           }
         });
+
+        var siteBox = document.getElementById('map-filter-site');
+        if (siteBox) siteBox.checked = attributeFilters.site;
+        var eventsBox = document.getElementById('map-filter-events');
+        if (eventsBox) eventsBox.checked = attributeFilters.events;
+      }
+
+      function countVisibleMarkers() {
+        var count = 0;
+        markerRecords.forEach(function (record) {
+          if (active.has(record.filterId) && passesAttributeFilters(record)) count++;
+        });
+        return count;
       }
 
       function updateSummary() {
         if (!geo) return;
-        emptyEl.classList.toggle('d-none', active.size > 0);
+        var visible = countVisibleMarkers();
+        emptyEl.classList.toggle('d-none', visible > 0);
+
+        var titleEl = document.getElementById('map-empty-title');
+        var textEl = document.getElementById('map-empty-text');
+        if (active.size === 0) {
+          if (titleEl) titleEl.textContent = 'Нет выбранных категорий';
+          if (textEl) textEl.textContent = 'Отметьте хотя бы один фильтр в панели слева.';
+        } else if (visible === 0) {
+          if (titleEl) titleEl.textContent = 'Нет объектов по выбранным условиям';
+          if (textEl) textEl.textContent = 'Отключите фильтры «С сайтом» или «С лентой событий» либо выберите другие категории.';
+        }
       }
 
       function syncUrl() {
@@ -547,6 +631,10 @@ const mapConfig = { base, aliases: MAP_FILTER_ALIASES };
         var params = new URLSearchParams(window.location.search);
         if (tokens.length) params.set('category', tokens.join(','));
         else params.set('category', 'none');
+        if (attributeFilters.site) params.set('site', '1');
+        else params.delete('site');
+        if (attributeFilters.events) params.set('events', '1');
+        else params.delete('events');
         var qs = params.toString();
         window.history.replaceState(null, '', window.location.pathname + (qs ? '?' + qs : ''));
       }
@@ -572,7 +660,10 @@ const mapConfig = { base, aliases: MAP_FILTER_ALIASES };
         var bounds = L.latLngBounds([]);
         if (geo) {
           geo.features.forEach(function (feature) {
-            if (!active.has(feature.properties.filterId)) return;
+            var p = feature.properties || {};
+            if (!active.has(p.filterId)) return;
+            if (attributeFilters.site && !p.site) return;
+            if (attributeFilters.events && !p.eventId) return;
             var c = feature.geometry && feature.geometry.coordinates;
             if (c && c.length >= 2) bounds.extend([c[1], c[0]]);
           });
@@ -599,6 +690,24 @@ const mapConfig = { base, aliases: MAP_FILTER_ALIASES };
           }
           applyState();
         });
+
+        var siteToggle = document.getElementById('map-filter-site');
+        if (siteToggle) {
+          siteToggle.addEventListener('change', function () {
+            attributeFilters.site = siteToggle.checked;
+            rebuildAttributeLayers();
+            applyState();
+          });
+        }
+
+        var eventsToggle = document.getElementById('map-filter-events');
+        if (eventsToggle) {
+          eventsToggle.addEventListener('change', function () {
+            attributeFilters.events = eventsToggle.checked;
+            rebuildAttributeLayers();
+            applyState();
+          });
+        }
 
         document.getElementById('map-select-all').addEventListener('click', function () { setAll(true); });
         document.getElementById('map-select-none').addEventListener('click', function () { setAll(false); });
@@ -632,6 +741,7 @@ const mapConfig = { base, aliases: MAP_FILTER_ALIASES };
           buildLayers(geo.features || []);
           renderFilters();
           initState();
+          rebuildAttributeLayers();
           bindUi();
           applyState();
           statusEl.classList.add('d-none');

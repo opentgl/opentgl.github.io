@@ -1,0 +1,121 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import Navbar from '../../components/Navbar.astro';
+import Footer from '../../components/Footer.astro';
+import feedsData from '../../data/culture-feeds.json';
+import eventsData from '../../data/culture-events.json';
+
+export function getStaticPaths() {
+  return (feedsData.feeds || []).map(feed => ({
+    params: { slug: feed.id },
+    props: { feed },
+  }));
+}
+
+const base = import.meta.env.BASE_URL;
+const { feed } = Astro.props;
+const feedEvents = eventsData.feeds?.[feed.id] || null;
+const items = feedEvents?.items || [];
+
+const dateFormatter = new Intl.DateTimeFormat('ru-RU', {
+  day: 'numeric',
+  month: 'long',
+  year: 'numeric',
+});
+const dateTimeFormatter = new Intl.DateTimeFormat('ru-RU', {
+  day: 'numeric',
+  month: 'long',
+  year: 'numeric',
+  hour: '2-digit',
+  minute: '2-digit',
+});
+
+function formatDate(value) {
+  if (!value) return 'Дата не указана';
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? 'Дата не указана' : dateFormatter.format(date);
+}
+
+function formatDateTime(value) {
+  if (!value) return '';
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? '' : dateTimeFormatter.format(date);
+}
+---
+
+<Layout
+  title={`События — ${feed.name}`}
+  description={`События и новости ${feed.name}: материалы из RSS-ленты учреждения культуры.`}
+  hideHero
+  breadcrumbs={[
+    { name: 'Открытый Тольятти', url: 'https://opentgl.github.io/' },
+    { name: 'Культура', url: 'https://opentgl.github.io/category/culture/' },
+    { name: 'События', url: `https://opentgl.github.io/events/${feed.id}/` },
+  ]}
+>
+  <Fragment slot="head">
+    <link rel="alternate" type="application/rss+xml" title={feed.name} href={feed.feed} />
+  </Fragment>
+  <Fragment slot="navbar"><Navbar /></Fragment>
+  <Fragment slot="footer"><Footer /></Fragment>
+
+  <div class="d-flex align-items-center gap-2 mb-3 flex-wrap">
+    <a href={`${base}category/culture`} class="btn btn-outline-secondary btn-sm d-inline-flex align-items-center">
+      <i style="width:18px;height:18px;" class="me-1" data-lucide="chevron-left"></i>
+      Культура
+    </a>
+    <span class="badge text-bg-light">RSS</span>
+  </div>
+
+  <div class="row justify-content-center">
+    <div class="col-lg-10 col-xl-8">
+      <p class="text-uppercase text-muted small fw-semibold mb-1">События и новости</p>
+      <h1 class="h3 fw-bold mb-2">{feed.name}</h1>
+      {feed.address && <p class="text-muted mb-3">{feed.address}</p>}
+
+      <div class="d-flex flex-wrap gap-2 mb-4">
+        <a class="btn btn-sm btn-outline-primary" href={feed.site} target="_blank" rel="noopener">
+          Сайт учреждения
+        </a>
+        <a class="btn btn-sm btn-outline-secondary" href={feed.feed} target="_blank" rel="noopener">
+          RSS-лента
+        </a>
+      </div>
+
+      {feedEvents?.error && (
+        <div class="alert alert-warning" role="alert">
+          Не удалось обновить ленту: {feedEvents.error}. Показаны последние сохранённые записи.
+        </div>
+      )}
+
+      {items.length ? (
+        <div class="d-flex flex-column gap-3">
+          {items.map(item => (
+            <article class="card border-0 shadow-sm">
+              <div class="card-body">
+                <div class="small text-muted mb-1">
+                  <time datetime={item.publishedAt || undefined}>{formatDate(item.publishedAt)}</time>
+                </div>
+                <h2 class="h5 mb-2">
+                  <a class="text-decoration-none" href={item.url} target="_blank" rel="noopener">
+                    {item.title}
+                  </a>
+                </h2>
+                {item.summary && <p class="mb-0 text-body-secondary">{item.summary}</p>}
+              </div>
+            </article>
+          ))}
+        </div>
+      ) : (
+        <div class="alert alert-light border" role="alert">
+          В ленте пока нет записей. Откройте сайт учреждения или RSS-ленту, чтобы проверить обновления.
+        </div>
+      )}
+
+      <p class="small text-muted mt-4 mb-0">
+        Источник: RSS-лента учреждения.
+        {feedEvents?.fetchedAt && <> Данные обновлены {formatDateTime(feedEvents.fetchedAt)}.</>}
+      </p>
+    </div>
+  </div>
+</Layout>
